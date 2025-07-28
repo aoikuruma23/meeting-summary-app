@@ -30,7 +30,12 @@ async def rate_limit_logging(request: Request, call_next):
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:5173",
+        "https://meeting-summary-app.vercel.app",  # Vercelフロントエンド
+        "https://meeting-summary-app-frontend.vercel.app"  # 代替URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,9 +69,11 @@ async def reset_rate_limit_stats():
     return {"message": "レート制限統計をリセットしました"}
 
 if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True
+        port=port,
+        reload=False  # 本番環境ではreloadを無効化
     ) 
