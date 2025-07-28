@@ -7,6 +7,8 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && python main.py
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
       - key: OPENAI_API_KEY
         sync: false
       - key: STRIPE_SECRET_KEY
