@@ -13,7 +13,7 @@ google-auth==2.23.4
 google-auth-oauthlib==1.1.0
 google-auth-httplib2==0.1.1
 google-api-python-client==2.108.0
-stripe==7.8.0
+stripe==8.0.0
 python-dotenv==1.0.0
 httpx==0.25.2
 pydantic==2.12.0a1
@@ -22,4 +22,5 @@ aiofiles==23.2.1
 python-magic==0.4.27
 reportlab==4.0.7
 python-docx==1.1.0
-slowapi==0.1.9 
+slowapi==0.1.9
+PyJWT==2.8.0 
