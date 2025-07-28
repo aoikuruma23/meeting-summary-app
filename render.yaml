@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: meeting-summary-app-backend
+    runtime: python
+    repo: https://github.com/aoikuruma23/meeting-summary-app
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: DUMMY_LOGIN_ENABLED
+        value: "true"
+      - key: FREE_TRIAL_DAYS
+        value: "31"
+      - key: FREE_USAGE_LIMIT
+        value: "10"
+      - key: MONTHLY_PRICE
+        value: "980" 
