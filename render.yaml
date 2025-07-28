@@ -2,6 +2,7 @@ services:
   - type: web
     name: meeting-summary-app-backend
     runtime: python
+    pythonVersion: "3.11"
     repo: https://github.com/aoikuruma23/meeting-summary-app
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && python main.py
