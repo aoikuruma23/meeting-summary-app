@@ -3,10 +3,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { recordingService } from '../services/recordingService'
 import './History.css'
 
-interface Summary {
-  summary: string
-  meeting_id: number
-}
+// interface Summary {
+//   summary: string
+//   meeting_id: number
+// }
 
 interface Meeting {
   id: number
@@ -22,7 +22,7 @@ const History: React.FC = () => {
   const { user } = useAuth()
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedMeeting, setSelectedMeeting] = useState<number | null>(null)
+  // const [selectedMeeting, setSelectedMeeting] = useState<number | null>(null)
   const [summary, setSummary] = useState<string>('')
   const [showSummary, setShowSummary] = useState(false)
   const [exporting, setExporting] = useState(false)

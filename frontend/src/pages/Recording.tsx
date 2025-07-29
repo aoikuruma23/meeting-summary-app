@@ -7,7 +7,7 @@ import './Recording.css'
 
 const Recording: React.FC = () => {
   const { user } = useAuth()
-  const { recordingState, startRecording, stopRecording, uploadChunk: _, resetRecording } = useRecording()
+  const { recordingState: _, startRecording, stopRecording, uploadChunk: __, resetRecording } = useRecording()
   const navigate = useNavigate()
   
   const [title, setTitle] = useState('')
