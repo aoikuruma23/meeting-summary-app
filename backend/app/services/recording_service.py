@@ -147,17 +147,22 @@ class RecordingService:
     async def _generate_summary(self, transcription_text: str) -> str:
         """文字起こしから要約を生成"""
         try:
+            print(f"DEBUG: 要約生成開始 - 文字数: {len(transcription_text)}")
             # ChatGPTで要約
             summary = await self.summary_service.generate_summary(transcription_text)
+            print(f"DEBUG: 要約生成完了 - 文字数: {len(summary)}")
             
             return summary
         
         except Exception as e:
+            print(f"DEBUG: 要約生成エラー - {str(e)}")
             raise Exception(f"要約の生成に失敗しました: {str(e)}")
     
     async def _save_to_drive(self, meeting_id: int, summary: str) -> str:
         """要約をローカルファイルに保存"""
         try:
+            print(f"DEBUG: 要約ファイル保存開始 - meeting_id: {meeting_id}")
+            
             # ファイル名の生成
             timestamp = datetime.now().strftime("%Y%m%d")
             filename = f"{timestamp}_議事録_{meeting_id}.txt"
@@ -167,15 +172,20 @@ class RecordingService:
             os.makedirs(summaries_dir, exist_ok=True)
             file_path = os.path.join(summaries_dir, filename)
             
+            print(f"DEBUG: 保存先ディレクトリ: {summaries_dir}")
+            print(f"DEBUG: 保存先ファイル: {file_path}")
+            
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(summary)
             
             print(f"DEBUG: 要約ファイル保存完了 - {file_path}")
+            print(f"DEBUG: ファイルサイズ: {len(summary)} 文字")
             
             # ファイルパスを返す（ブラウザからアクセス可能な形式）
             return f"/api/recording/download/{meeting_id}"
         
         except Exception as e:
+            print(f"DEBUG: ファイル保存エラー - {str(e)}")
             raise Exception(f"ファイル保存に失敗しました: {str(e)}")
     
     async def _update_meeting_status(self, meeting_id: int, status: str, file_url: str = None, db: Session = None):
