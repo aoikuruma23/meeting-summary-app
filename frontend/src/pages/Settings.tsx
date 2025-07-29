@@ -4,7 +4,7 @@ import './Settings.css'
 
 const Settings: React.FC = () => {
   const { user } = useAuth()
-  const [subscriptionStatus, setSubscriptionStatus] = useState({
+  const [subscriptionStatus, _setSubscriptionStatus] = useState({
     is_premium: false,
     trial_days_remaining: 0,
     usage_count: 0,

@@ -19,7 +19,7 @@ interface SubscriptionStatus {
 }
 
 const Billing: React.FC = () => {
-  const { user } = useAuth();
+  const { user: _ } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);

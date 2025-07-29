@@ -49,7 +49,7 @@ const History: React.FC = () => {
       const response = await recordingService.getSummary(meetingId)
       if (response.data && response.data.summary) {
         setSummary(response.data.summary)
-        setSelectedMeeting(meetingId)
+        // setSelectedMeeting(meetingId)
         setShowSummary(true)
       }
     } catch (error) {
