@@ -168,25 +168,30 @@ class RecordingService:
             timestamp = datetime.now().strftime("%Y%m%d")
             filename = f"{timestamp}_議事録_{meeting_id}.txt"
             
-            # summariesディレクトリに保存
-            summaries_dir = os.path.join(os.path.dirname(self.upload_dir), "summaries")
+            # 絶対パスでsummariesディレクトリを作成
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            summaries_dir = os.path.join(current_dir, "summaries")
             os.makedirs(summaries_dir, exist_ok=True)
             file_path = os.path.join(summaries_dir, filename)
             
             print(f"DEBUG: 保存先ディレクトリ: {summaries_dir}")
             print(f"DEBUG: 保存先ファイル: {file_path}")
+            print(f"DEBUG: ディレクトリ存在確認: {os.path.exists(summaries_dir)}")
             
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(summary)
             
             print(f"DEBUG: 要約ファイル保存完了 - {file_path}")
             print(f"DEBUG: ファイルサイズ: {len(summary)} 文字")
+            print(f"DEBUG: ファイル存在確認: {os.path.exists(file_path)}")
             
             # ファイルパスを返す（ブラウザからアクセス可能な形式）
             return f"/api/recording/download/{meeting_id}"
         
         except Exception as e:
             print(f"DEBUG: ファイル保存エラー - {str(e)}")
+            import traceback
+            print(f"DEBUG: エラー詳細: {traceback.format_exc()}")
             raise Exception(f"ファイル保存に失敗しました: {str(e)}")
     
     async def _update_meeting_status(self, meeting_id: int, status: str, file_url: str = None, db: Session = None):
