@@ -34,7 +34,9 @@ app.add_middleware(
         "http://localhost:3000", 
         "http://localhost:5173",
         "https://meeting-summary-app.vercel.app",  # Vercelフロントエンド
-        "https://meeting-summary-app-frontend.vercel.app"  # 代替URL
+        "https://meeting-summary-app-frontend.vercel.app",  # 代替URL
+        "https://meeting-summary-app.onrender.com",  # Renderフロントエンド
+        "https://meeting-summary-app-frontend.onrender.com"  # Renderフロントエンド代替
     ],
     allow_credentials=True,
     allow_methods=["*"],
