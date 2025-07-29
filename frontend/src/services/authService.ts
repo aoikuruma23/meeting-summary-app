@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_BASE_URL = process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}/api` : 'https://meeting-summary-app-backend.onrender.com/api'
 
 // axiosのインスタンスを作成
 const apiClient = axios.create({
