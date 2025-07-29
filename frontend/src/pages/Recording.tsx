@@ -45,8 +45,16 @@ const Recording: React.FC = () => {
     })()
     
     try {
-      // マイクの権限を取得
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // マイクの権限を事前チェック
+      console.log('マイク権限を確認中...')
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      })
+      console.log('マイク権限取得成功')
       stream.current = mediaStream
       
       // MediaRecorderを初期化
@@ -114,7 +122,21 @@ const Recording: React.FC = () => {
       }
     } catch (error) {
       console.error('録音開始エラー:', error)
-      alert('録音を開始できませんでした。マイクの権限を確認してください。')
+      
+      // エラーの種類に応じて適切なメッセージを表示
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          alert('マイクの権限が拒否されました。ブラウザの設定でマイクを許可してください。')
+        } else if (error.name === 'NotFoundError') {
+          alert('マイクが見つかりません。マイクが接続されているか確認してください。')
+        } else if (error.name === 'NotSupportedError') {
+          alert('このブラウザは録音機能をサポートしていません。')
+        } else {
+          alert(`録音を開始できませんでした: ${error.message}`)
+        }
+      } else {
+        alert('録音を開始できませんでした。マイクの権限を確認してください。')
+      }
     }
   }
 
