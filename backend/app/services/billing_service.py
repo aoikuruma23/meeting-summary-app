@@ -102,6 +102,7 @@ class BillingService:
         """サブスクリプション状態を取得"""
         try:
             print(f"DEBUG: get_subscription_status - user_id: {user.id}, is_premium: {user.is_premium}, type: {type(user.is_premium)}")
+            print(f"ERROR: データベースのis_premiumがfalseになっています！Webhookが正しく処理されていない可能性があります。")
             # プレミアムユーザーの場合
             if user.is_premium == "true":
                 if user.stripe_subscription_id:
@@ -280,13 +281,18 @@ class BillingService:
         try:
             # ユーザーIDを取得
             user_id = session.metadata.get('user_id')
+            print(f"ERROR: Webhook処理開始 - user_id: {user_id}")
             if not user_id:
+                print(f"ERROR: user_idが見つかりません")
                 return
             
             # ユーザーを取得
             user = db.query(User).filter(User.id == user_id).first()
             if not user:
+                print(f"ERROR: ユーザーが見つかりません - user_id: {user_id}")
                 return
+            
+            print(f"ERROR: ユーザー発見 - id: {user.id}, email: {user.email}, is_premium: {user.is_premium}")
             
             # サブスクリプションIDを保存
             subscription_id = session.subscription
@@ -294,10 +300,13 @@ class BillingService:
                 user.stripe_subscription_id = subscription_id
                 user.is_premium = "true"
                 db.commit()
-                print(f"DEBUG: サブスクリプション完了 - user_id: {user_id}, subscription_id: {subscription_id}")
+                print(f"ERROR: サブスクリプション完了 - user_id: {user_id}, subscription_id: {subscription_id}")
+                print(f"ERROR: is_premiumをtrueに更新しました")
+            else:
+                print(f"ERROR: subscription_idが見つかりません")
                 
         except Exception as e:
-            print(f"DEBUG: チェックアウト完了処理エラー - {str(e)}")
+            print(f"ERROR: チェックアウト完了処理エラー - {str(e)}")
             raise e
         
     def _handle_subscription_updated(self, subscription: dict, db: Session):
