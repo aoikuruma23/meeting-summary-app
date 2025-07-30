@@ -101,6 +101,7 @@ class BillingService:
     def get_subscription_status(self, user: User) -> dict:
         """サブスクリプション状態を取得"""
         try:
+            print(f"DEBUG: get_subscription_status - user_id: {user.id}, is_premium: {user.is_premium}, type: {type(user.is_premium)}")
             # プレミアムユーザーの場合
             if user.is_premium == "true":
                 if user.stripe_subscription_id:
