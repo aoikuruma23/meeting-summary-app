@@ -166,6 +166,7 @@ async def get_subscription_status(
         # ユーザー認証
         auth_service = AuthService()
         user_email = auth_service.verify_token(token)
+        print(f"DEBUG: get_subscription_status endpoint - user_email: {user_email}")
         user = db.query(User).filter(User.email == user_email).first()
         
         if not user:
@@ -174,6 +175,7 @@ async def get_subscription_status(
                 detail="ユーザーが見つかりません"
             )
         
+        print(f"DEBUG: get_subscription_status endpoint - found user: id={user.id}, email={user.email}, is_premium={user.is_premium}")
         # サブスクリプション状況を取得
         result = billing_service.get_subscription_status(user)
         
