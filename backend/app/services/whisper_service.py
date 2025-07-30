@@ -7,7 +7,10 @@ class WhisperService:
     def __init__(self):
         print(f"DEBUG: OpenAI API Key設定確認 - Key exists: {bool(settings.OPENAI_API_KEY)}")
         print(f"DEBUG: OpenAI API Key長さ: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}")
-        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+        # APIキーから改行文字を除去
+        api_key = settings.OPENAI_API_KEY.strip() if settings.OPENAI_API_KEY else None
+        print(f"DEBUG: 修正後のAPI Key長さ: {len(api_key) if api_key else 0}")
+        self.client = openai.OpenAI(api_key=api_key)
     
     async def transcribe(self, audio_file_path: str) -> str:
         """音声ファイルを文字起こし"""

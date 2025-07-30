@@ -10,6 +10,8 @@ class SummaryService:
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise Exception('OPENAI_API_KEYが.envに設定されていません')
+        # APIキーから改行文字を除去
+        api_key = api_key.strip()
         self.client = OpenAI(api_key=api_key)
     
     async def generate_summary(self, transcript: str, participants: list = None) -> str:

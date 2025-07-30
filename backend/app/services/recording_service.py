@@ -169,7 +169,7 @@ class RecordingService:
             filename = f"{timestamp}_議事録_{meeting_id}.txt"
             
             # 絶対パスでsummariesディレクトリを作成
-            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             summaries_dir = os.path.join(current_dir, "summaries")
             os.makedirs(summaries_dir, exist_ok=True)
             file_path = os.path.join(summaries_dir, filename)
