@@ -507,7 +507,7 @@ async def get_summary(
         # ファイルパスの生成（summariesディレクトリを参照）
         import os
         current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        summaries_dir = os.path.join(current_dir, "..", "summaries")
+        summaries_dir = os.path.join(current_dir, "summaries")
         print(f"DEBUG: current_dir = {current_dir}")
         print(f"DEBUG: summaries_dir = {summaries_dir}")
         print(f"DEBUG: summaries_dir exists = {os.path.exists(summaries_dir)}")
