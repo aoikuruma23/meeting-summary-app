@@ -59,6 +59,8 @@ const Billing: React.FC = () => {
   const fetchSubscriptionStatus = async () => {
     try {
       const response = await billingService.getSubscriptionStatus();
+      console.log('DEBUG: サブスクリプション状態レスポンス:', response);
+      console.log('DEBUG: サブスクリプション状態データ:', response.data);
       setSubscription(response.data);
     } catch (error) {
       console.error('サブスクリプション状態の取得に失敗:', error);
