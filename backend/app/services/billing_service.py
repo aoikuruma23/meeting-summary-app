@@ -101,28 +101,56 @@ class BillingService:
     def get_subscription_status(self, user: User) -> dict:
         """サブスクリプション状態を取得"""
         try:
-            if not user.stripe_subscription_id:
-                return {
-                    "success": True,
-                    "message": "サブスクリプション状態を取得しました",
-                    "data": {
-                        "isActive": False,
-                        "plan": "free",
-                        "currentPeriodEnd": None,
-                        "cancelAtPeriodEnd": False
+            # プレミアムユーザーの場合
+            if user.is_premium == "true":
+                if user.stripe_subscription_id:
+                    try:
+                        subscription = stripe.Subscription.retrieve(user.stripe_subscription_id)
+                        return {
+                            "success": True,
+                            "message": "サブスクリプション状態を取得しました",
+                            "data": {
+                                "isActive": subscription.status == 'active',
+                                "plan": "premium",
+                                "currentPeriodEnd": subscription.current_period_end,
+                                "cancelAtPeriodEnd": subscription.cancel_at_period_end
+                            }
+                        }
+                    except Exception as e:
+                        print(f"DEBUG: Stripe subscription retrieval error: {str(e)}")
+                        # Stripeエラーの場合でもプレミアム状態を返す
+                        return {
+                            "success": True,
+                            "message": "サブスクリプション状態を取得しました",
+                            "data": {
+                                "isActive": True,
+                                "plan": "premium",
+                                "currentPeriodEnd": None,
+                                "cancelAtPeriodEnd": False
+                            }
+                        }
+                else:
+                    # プレミアムユーザーだがStripeサブスクリプションIDがない場合
+                    return {
+                        "success": True,
+                        "message": "サブスクリプション状態を取得しました",
+                        "data": {
+                            "isActive": True,
+                            "plan": "premium",
+                            "currentPeriodEnd": None,
+                            "cancelAtPeriodEnd": False
+                        }
                     }
-                }
             
-            subscription = stripe.Subscription.retrieve(user.stripe_subscription_id)
-            
+            # 無料ユーザーの場合
             return {
                 "success": True,
                 "message": "サブスクリプション状態を取得しました",
                 "data": {
-                    "isActive": subscription.status == 'active',
-                    "plan": "premium",
-                    "currentPeriodEnd": subscription.current_period_end,
-                    "cancelAtPeriodEnd": subscription.cancel_at_period_end
+                    "isActive": False,
+                    "plan": "free",
+                    "currentPeriodEnd": None,
+                    "cancelAtPeriodEnd": False
                 }
             }
             
