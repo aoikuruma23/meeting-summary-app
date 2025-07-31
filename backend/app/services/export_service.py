@@ -7,6 +7,7 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -43,6 +44,24 @@ class ExportService:
                         print(f"フォント登録失敗: {font_path} - {str(e)}")
                         continue
             
+            # UnicodeCIDFontをフォールバックとして使用
+            if not font_registered:
+                try:
+                    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+                    print("UnicodeCIDFontを登録しました: HeiseiMin-W3")
+                    font_registered = True
+                except Exception as e:
+                    print(f"UnicodeCIDFont登録失敗: {str(e)}")
+            
+            # 追加の日本語フォントを試行
+            if not font_registered:
+                try:
+                    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+                    print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W5")
+                    font_registered = True
+                except Exception as e:
+                    print(f"UnicodeCIDFont登録失敗: {str(e)}")
+            
             if not font_registered:
                 print("警告: 日本語フォントが見つかりません。デフォルトフォントを使用します。")
                 
@@ -65,7 +84,18 @@ class ExportService:
             styles = getSampleStyleSheet()
             
             # フォント名を決定
-            font_name = 'JapaneseFont' if 'JapaneseFont' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+            available_fonts = pdfmetrics.getRegisteredFontNames()
+            print(f"利用可能なフォント: {available_fonts}")
+            
+            if 'JapaneseFont' in available_fonts:
+                font_name = 'JapaneseFont'
+            elif 'HeiseiMin-W3' in available_fonts:
+                font_name = 'HeiseiMin-W3'
+            elif 'HeiseiKakuGo-W5' in available_fonts:
+                font_name = 'HeiseiKakuGo-W5'
+            else:
+                font_name = 'Helvetica'
+                print("警告: 日本語フォントが利用できません。Helveticaを使用します。")
             
             title_style = ParagraphStyle(
                 'CustomTitle',
