@@ -8,7 +8,7 @@ from app.models.meeting import Meeting, Speaker, Utterance
 from typing import Dict, Any
 import json
 
-router = APIRouter(prefix="/api/summary", tags=["summary"])
+router = APIRouter(tags=["summary"])
 
 @router.get("/health")
 async def health_check():
