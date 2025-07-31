@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://meeting-summary-app-backend.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com';
 
 // 認証トークンを取得する関数
 const getAuthToken = (): string | null => {

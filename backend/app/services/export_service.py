@@ -19,21 +19,33 @@ class ExportService:
         
         # 日本語フォントの設定
         try:
-            # Windows標準の日本語フォントを試行
+            # フォントパスの優先順位
             font_paths = [
+                # Render環境で利用可能なフォント
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux標準
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Linux標準
+                # Windows標準の日本語フォント
                 "C:/Windows/Fonts/msgothic.ttc",  # MS Gothic
                 "C:/Windows/Fonts/yu Gothic.ttc",  # Yu Gothic
                 "C:/Windows/Fonts/meiryo.ttc",    # Meiryo
                 "C:/Windows/Fonts/msmincho.ttc",  # MS Mincho
             ]
             
+            font_registered = False
             for font_path in font_paths:
                 if os.path.exists(font_path):
-                    pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
-                    print(f"日本語フォントを登録しました: {font_path}")
-                    break
-            else:
+                    try:
+                        pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
+                        print(f"日本語フォントを登録しました: {font_path}")
+                        font_registered = True
+                        break
+                    except Exception as e:
+                        print(f"フォント登録失敗: {font_path} - {str(e)}")
+                        continue
+            
+            if not font_registered:
                 print("警告: 日本語フォントが見つかりません。デフォルトフォントを使用します。")
+                
         except Exception as e:
             print(f"フォント登録エラー: {str(e)}")
     
@@ -51,10 +63,14 @@ class ExportService:
             
             # スタイルを設定
             styles = getSampleStyleSheet()
+            
+            # フォント名を決定
+            font_name = 'JapaneseFont' if 'JapaneseFont' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+            
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Heading1'],
-                fontName='JapaneseFont' if 'JapaneseFont' in pdfmetrics.getRegisteredFontNames() else 'Helvetica',
+                fontName=font_name,
                 fontSize=18,
                 spaceAfter=30,
                 alignment=1  # 中央揃え
@@ -62,7 +78,7 @@ class ExportService:
             heading_style = ParagraphStyle(
                 'CustomHeading',
                 parent=styles['Heading2'],
-                fontName='JapaneseFont' if 'JapaneseFont' in pdfmetrics.getRegisteredFontNames() else 'Helvetica',
+                fontName=font_name,
                 fontSize=14,
                 spaceAfter=12,
                 spaceBefore=12
@@ -70,7 +86,7 @@ class ExportService:
             normal_style = ParagraphStyle(
                 'CustomNormal',
                 parent=styles['Normal'],
-                fontName='JapaneseFont' if 'JapaneseFont' in pdfmetrics.getRegisteredFontNames() else 'Helvetica',
+                fontName=font_name,
                 fontSize=11,
                 spaceAfter=6,
                 leading=14

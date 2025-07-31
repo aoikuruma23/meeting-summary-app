@@ -37,7 +37,7 @@ const Login: React.FC = () => {
     setLoading(true)
     try {
       // ダミーログインAPIを呼び出し
-      const apiUrl = process.env.REACT_APP_API_URL || 'https://meeting-summary-app-backend.onrender.com'
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'
       const response = await fetch(`${apiUrl}/api/auth/dummy`, {
         method: 'POST',
         headers: {
