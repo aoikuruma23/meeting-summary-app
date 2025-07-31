@@ -12,99 +12,42 @@ from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from app.core.config import settings
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.lib.colors import black, blue
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-import base64
 
 class ExportService:
     def __init__(self):
         self.export_dir = os.path.join(settings.UPLOAD_DIR, "exports")
         os.makedirs(self.export_dir, exist_ok=True)
-        
-        # 日本語フォントの設定
-        font_name = self._create_japanese_font()
-        
-        # スタイルの設定
-        styles = getSampleStyleSheet()
-        
-        # カスタムスタイルの作成
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=18,
-            spaceAfter=20,
-            alignment=TA_CENTER,
-            fontName=font_name
-        )
-        
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=14,
-            spaceAfter=12,
-            fontName=font_name
-        )
-        
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
-            fontSize=12,
-            spaceAfter=6,
-            fontName=font_name
-        )
-        """日本語フォントを登録"""
-        font_registered = False
-        
-        # 利用可能なフォントを確認
-        available_fonts = pdfmetrics.getRegisteredFontNames()
-        print(f"利用可能なフォント: {available_fonts}")
-        
-        # 日本語フォントの優先順位
-        japanese_fonts = ['JapaneseFont', 'HeiseiMin-W3', 'HeiseiKakuGo-W5', 'HeiseiKakuGo-W3']
-        font_name = 'Helvetica'  # デフォルト
-        
-        for font in japanese_fonts:
-            if font in available_fonts:
-                font_name = font
-                print(f"日本語フォントを使用: {font}")
-                break
-        
-        if font_name == 'Helvetica':
-            print("警告: 日本語フォントが利用できません。Helveticaを使用します。")
-        
-        return font_name
     
     def _create_japanese_font(self):
-        """日本語フォントを直接作成"""
+        """日本語フォントを設定"""
         try:
-            # 基本的な日本語フォントを試行
-            font_name = self._register_japanese_font()
+            # 利用可能なフォントを確認
+            available_fonts = pdfmetrics.getRegisteredFontNames()
+            print(f"利用可能なフォント: {available_fonts}")
             
-            # フォントが見つからない場合、UnicodeCIDFontを使用
-            if font_name == 'Helvetica':
+            # UnicodeCIDFontを試行
+            try:
+                pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+                print("UnicodeCIDFontを登録しました: HeiseiMin-W3")
+                return 'HeiseiMin-W3'
+            except Exception as e:
+                print(f"UnicodeCIDFont登録失敗: {str(e)}")
+                
                 try:
-                    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
-                    font_name = 'HeiseiMin-W3'
-                    print("UnicodeCIDFontを登録しました: HeiseiMin-W3")
+                    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+                    print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W5")
+                    return 'HeiseiKakuGo-W5'
                 except Exception as e:
                     print(f"UnicodeCIDFont登録失敗: {str(e)}")
+                    
                     try:
-                        pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
-                        font_name = 'HeiseiKakuGo-W5'
-                        print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W5")
+                        pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W3'))
+                        print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W3")
+                        return 'HeiseiKakuGo-W3'
                     except Exception as e:
                         print(f"UnicodeCIDFont登録失敗: {str(e)}")
-                        font_name = 'Helvetica'
-            
-            return font_name
+                        print("警告: 日本語フォントが利用できません。Helveticaを使用します。")
+                        return 'Helvetica'
         except Exception as e:
             print(f"フォント作成エラー: {str(e)}")
             return 'Helvetica'
@@ -121,25 +64,39 @@ class ExportService:
             doc = SimpleDocTemplate(file_path, pagesize=A4)
             story = []
             
+            # 日本語フォントを設定
+            font_name = self._create_japanese_font()
+            
             # スタイルを設定
             styles = getSampleStyleSheet()
             
-            # フォント名を決定
-            available_fonts = pdfmetrics.getRegisteredFontNames()
-            print(f"利用可能なフォント: {available_fonts}")
+            # カスタムスタイルの作成
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName=font_name,
+                fontSize=18,
+                spaceAfter=30,
+                alignment=1  # 中央揃え
+            )
             
-            # 日本語フォントの優先順位
-            japanese_fonts = ['JapaneseFont', 'HeiseiMin-W3', 'HeiseiKakuGo-W5', 'HeiseiKakuGo-W3']
-            font_name = 'Helvetica'  # デフォルト
+            heading_style = ParagraphStyle(
+                'CustomHeading',
+                parent=styles['Heading2'],
+                fontName=font_name,
+                fontSize=14,
+                spaceAfter=12,
+                spaceBefore=12
+            )
             
-            for font in japanese_fonts:
-                if font in available_fonts:
-                    font_name = font
-                    print(f"日本語フォントを使用: {font}")
-                    break
-            
-            if font_name == 'Helvetica':
-                print("警告: 日本語フォントが利用できません。Helveticaを使用します。")
+            normal_style = ParagraphStyle(
+                'CustomNormal',
+                parent=styles['Normal'],
+                fontName=font_name,
+                fontSize=11,
+                spaceAfter=6,
+                leading=14
+            )
             
             # 日本語テキストのエンコーディング処理
             def safe_text(text):
@@ -149,31 +106,6 @@ class ExportService:
                     return text.encode('utf-8').decode('utf-8')
                 except:
                     return text
-            
-            title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
-                fontName=font_name,
-                fontSize=18,
-                spaceAfter=30,
-                alignment=1  # 中央揃え
-            )
-            heading_style = ParagraphStyle(
-                'CustomHeading',
-                parent=styles['Heading2'],
-                fontName=font_name,
-                fontSize=14,
-                spaceAfter=12,
-                spaceBefore=12
-            )
-            normal_style = ParagraphStyle(
-                'CustomNormal',
-                parent=styles['Normal'],
-                fontName=font_name,
-                fontSize=11,
-                spaceAfter=6,
-                leading=14
-            )
             
             # タイトルを追加
             story.append(Paragraph(safe_text("議事録要約"), title_style))
