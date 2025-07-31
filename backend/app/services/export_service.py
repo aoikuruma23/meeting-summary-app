@@ -87,15 +87,27 @@ class ExportService:
             available_fonts = pdfmetrics.getRegisteredFontNames()
             print(f"利用可能なフォント: {available_fonts}")
             
-            if 'JapaneseFont' in available_fonts:
-                font_name = 'JapaneseFont'
-            elif 'HeiseiMin-W3' in available_fonts:
-                font_name = 'HeiseiMin-W3'
-            elif 'HeiseiKakuGo-W5' in available_fonts:
-                font_name = 'HeiseiKakuGo-W5'
-            else:
-                font_name = 'Helvetica'
+            # 日本語フォントの優先順位
+            japanese_fonts = ['JapaneseFont', 'HeiseiMin-W3', 'HeiseiKakuGo-W5']
+            font_name = 'Helvetica'  # デフォルト
+            
+            for font in japanese_fonts:
+                if font in available_fonts:
+                    font_name = font
+                    print(f"日本語フォントを使用: {font}")
+                    break
+            
+            if font_name == 'Helvetica':
                 print("警告: 日本語フォントが利用できません。Helveticaを使用します。")
+            
+            # 日本語テキストのエンコーディング処理
+            def safe_text(text):
+                """日本語テキストを安全に処理"""
+                try:
+                    # UTF-8でエンコードしてからデコード
+                    return text.encode('utf-8').decode('utf-8')
+                except:
+                    return text
             
             title_style = ParagraphStyle(
                 'CustomTitle',
@@ -123,23 +135,23 @@ class ExportService:
             )
             
             # タイトルを追加
-            story.append(Paragraph("議事録要約", title_style))
+            story.append(Paragraph(safe_text("議事録要約"), title_style))
             story.append(Spacer(1, 20))
             
             # 会議情報を追加
-            story.append(Paragraph(f"会議タイトル: {meeting_title}", heading_style))
-            story.append(Paragraph(f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}", normal_style))
-            story.append(Paragraph(f"議事録ID: {meeting_id}", normal_style))
+            story.append(Paragraph(safe_text(f"会議タイトル: {meeting_title}"), heading_style))
+            story.append(Paragraph(safe_text(f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}"), normal_style))
+            story.append(Paragraph(safe_text(f"議事録ID: {meeting_id}"), normal_style))
             story.append(Spacer(1, 20))
             
             # 要約内容を追加
-            story.append(Paragraph("要約内容", heading_style))
+            story.append(Paragraph(safe_text("要約内容"), heading_style))
             
             # 要約を段落に分割して追加
             paragraphs = summary_content.split('\n\n')
             for paragraph in paragraphs:
                 if paragraph.strip():
-                    story.append(Paragraph(paragraph.strip(), normal_style))
+                    story.append(Paragraph(safe_text(paragraph.strip()), normal_style))
                     story.append(Spacer(1, 6))
             
             # PDFを生成
