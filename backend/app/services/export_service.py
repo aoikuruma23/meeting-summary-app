@@ -62,6 +62,15 @@ class ExportService:
                 except Exception as e:
                     print(f"UnicodeCIDFont登録失敗: {str(e)}")
             
+            # さらに追加のフォントを試行
+            if not font_registered:
+                try:
+                    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W3'))
+                    print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W3")
+                    font_registered = True
+                except Exception as e:
+                    print(f"UnicodeCIDFont登録失敗: {str(e)}")
+            
             if not font_registered:
                 print("警告: 日本語フォントが見つかりません。デフォルトフォントを使用します。")
                 
@@ -88,7 +97,7 @@ class ExportService:
             print(f"利用可能なフォント: {available_fonts}")
             
             # 日本語フォントの優先順位
-            japanese_fonts = ['JapaneseFont', 'HeiseiMin-W3', 'HeiseiKakuGo-W5']
+            japanese_fonts = ['JapaneseFont', 'HeiseiMin-W3', 'HeiseiKakuGo-W5', 'HeiseiKakuGo-W3']
             font_name = 'Helvetica'  # デフォルト
             
             for font in japanese_fonts:
