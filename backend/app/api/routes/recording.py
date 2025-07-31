@@ -722,6 +722,11 @@ async def export_summary(
         print(f"DEBUG: summaries_dir = {summaries_dir}")
         print(f"DEBUG: summaries_dir exists = {os.path.exists(summaries_dir)}")
         
+        # summariesディレクトリが存在しない場合は作成
+        if not os.path.exists(summaries_dir):
+            os.makedirs(summaries_dir, exist_ok=True)
+            print(f"DEBUG: summariesディレクトリを作成しました: {summaries_dir}")
+        
         # パターンマッチングでファイルを検索
         import glob
         pattern = os.path.join(summaries_dir, f"*_議事録_{meeting.id}.txt")
@@ -733,22 +738,27 @@ async def export_summary(
             # ディレクトリ内の全ファイルを確認
             all_files = glob.glob(os.path.join(summaries_dir, "*"))
             print(f"DEBUG: all_files in summaries = {all_files}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="要約ファイルが見つかりません"
-            )
-        
-        file_path = matching_files[0]
-        print(f"DEBUG: selected file_path = {file_path}")
-        
-        if not os.path.exists(file_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="要約ファイルが見つかりません"
-            )
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            summary_content = f.read()
+            
+            # 要約ファイルが見つからない場合、データベースから要約を取得
+            if meeting.summary:
+                summary_content = meeting.summary
+                print(f"DEBUG: データベースから要約を取得しました")
+            else:
+                # デフォルトの要約を作成
+                summary_content = f"会議タイトル: {meeting.title}\n\n要約内容が利用できません。録音データを確認してください。"
+                print(f"DEBUG: デフォルト要約を作成しました")
+        else:
+            file_path = matching_files[0]
+            print(f"DEBUG: selected file_path = {file_path}")
+            
+            if not os.path.exists(file_path):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="要約ファイルが見つかりません"
+                )
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                summary_content = f.read()
         
         # エクスポートサービスを使用してファイルを生成
         export_service = ExportService()
