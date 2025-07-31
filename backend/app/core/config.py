@@ -4,7 +4,14 @@ import os
 
 class Settings(BaseSettings):
     # データベース設定
-    DATABASE_URL: str = "sqlite:///./meeting_summary.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
+    
+    # PostgreSQLの場合、URLを調整
+    @property
+    def database_url(self) -> str:
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
     
     # セキュリティ設定
     SECRET_KEY: str = "your-secret-key-here"
