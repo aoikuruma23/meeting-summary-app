@@ -4,10 +4,27 @@ from app.core.database import get_db
 from app.middleware.auth import get_current_user_dummy
 from app.services.summary_service import SummaryService
 from app.services.productivity_service import ProductivityService
+from app.models.meeting import Meeting, Speaker, Utterance
 from typing import Dict, Any
 import json
 
 router = APIRouter(prefix="/api/summary", tags=["summary"])
+
+@router.get("/health")
+async def health_check():
+    """要約APIのヘルスチェック"""
+    return {
+        "success": True,
+        "message": "要約APIは正常に動作しています",
+        "data": {
+            "version": "1.0.0",
+            "endpoints": [
+                "POST /api/summary/regenerate/{meeting_id}",
+                "GET /api/summary/speaker/{meeting_id}",
+                "GET /api/summary/productivity/{meeting_id}"
+            ]
+        }
+    }
 
 @router.post("/regenerate/{meeting_id}")
 async def regenerate_summary(
@@ -159,7 +176,4 @@ async def get_productivity_report(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"生産性レポート取得に失敗しました: {str(e)}")
-
-# 必要なインポートを追加
-from app.models.meeting import Meeting, Speaker, Utterance 
+        raise HTTPException(status_code=500, detail=f"生産性レポート取得に失敗しました: {str(e)}") 
