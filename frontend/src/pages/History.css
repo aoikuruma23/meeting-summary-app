@@ -278,6 +278,7 @@
 
 .summary-text {
   padding: 2rem;
+  padding-bottom: 4rem; /* 最下段に2行分の余白を追加 */
   max-height: 60vh;
   overflow-y: auto;
 }
@@ -327,5 +328,6 @@
   
   .summary-text {
     padding: 1rem;
+    padding-bottom: 3rem; /* モバイルでも最下段に余白を追加 */
   }
 } 
