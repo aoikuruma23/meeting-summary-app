@@ -278,7 +278,7 @@
 
 .summary-text {
   padding: 2rem;
-  padding-bottom: 4rem; /* 最下段に2行分の余白を追加 */
+  padding-bottom: 6rem; /* 最下段に3行分の余白を追加 */
   max-height: 60vh;
   overflow-y: auto;
 }
@@ -289,6 +289,7 @@
   line-height: 1.6;
   color: #333;
   margin: 0;
+  margin-bottom: 2rem; /* テキストの最下段にも余白を追加 */
   font-size: 1rem;
 }
 
@@ -328,6 +329,6 @@
   
   .summary-text {
     padding: 1rem;
-    padding-bottom: 3rem; /* モバイルでも最下段に余白を追加 */
+    padding-bottom: 5rem; /* モバイルでも最下段に余白を追加 */
   }
 } 
