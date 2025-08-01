@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # セキュリティ設定
     SECRET_KEY: str = "your-secret-key-here"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5  # 5分（テスト用）
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24時間（本番用）
     
     # OpenAI API設定
     OPENAI_API_KEY: Optional[str] = None
