@@ -160,39 +160,28 @@ class RecordingService:
             raise Exception(f"要約の生成に失敗しました: {str(e)}")
     
     async def _save_to_drive(self, meeting_id: int, summary: str) -> str:
-        """要約をローカルファイルに保存"""
+        """要約をデータベースに保存"""
         try:
-            print(f"DEBUG: 要約ファイル保存開始 - meeting_id: {meeting_id}")
+            print(f"DEBUG: 要約データベース保存開始 - meeting_id: {meeting_id}")
             
-            # ファイル名の生成
-            timestamp = datetime.now().strftime("%Y%m%d")
-            filename = f"{timestamp}_議事録_{meeting_id}.txt"
+            # データベースに要約を保存
+            db = next(get_db())
+            meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
             
-            # 絶対パスでsummariesディレクトリを作成
-            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            summaries_dir = os.path.join(current_dir, "summaries")
-            os.makedirs(summaries_dir, exist_ok=True)
-            file_path = os.path.join(summaries_dir, filename)
-            
-            print(f"DEBUG: 保存先ディレクトリ: {summaries_dir}")
-            print(f"DEBUG: 保存先ファイル: {file_path}")
-            print(f"DEBUG: ディレクトリ存在確認: {os.path.exists(summaries_dir)}")
-            
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(summary)
-            
-            print(f"DEBUG: 要約ファイル保存完了 - {file_path}")
-            print(f"DEBUG: ファイルサイズ: {len(summary)} 文字")
-            print(f"DEBUG: ファイル存在確認: {os.path.exists(file_path)}")
-            
-            # ファイルパスを返す（ブラウザからアクセス可能な形式）
-            return f"/api/recording/download/{meeting_id}"
+            if meeting:
+                meeting.summary = summary
+                db.commit()
+                print(f"DEBUG: 要約データベース保存完了 - meeting_id: {meeting_id}")
+                print(f"DEBUG: 要約文字数: {len(summary)} 文字")
+                return f"/api/recording/summary/{meeting_id}"
+            else:
+                raise Exception(f"会議ID {meeting_id} が見つかりません")
         
         except Exception as e:
-            print(f"DEBUG: ファイル保存エラー - {str(e)}")
+            print(f"DEBUG: データベース保存エラー - {str(e)}")
             import traceback
             print(f"DEBUG: エラー詳細: {traceback.format_exc()}")
-            raise Exception(f"ファイル保存に失敗しました: {str(e)}")
+            raise Exception(f"要約の保存に失敗しました: {str(e)}")
     
     async def _update_meeting_status(self, meeting_id: int, status: str, file_url: str = None, db: Session = None):
         """議事録のステータスを更新"""

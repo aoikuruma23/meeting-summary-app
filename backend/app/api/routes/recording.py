@@ -504,54 +504,21 @@ async def get_summary(
                 detail="議事録が見つかりません"
             )
         
-        # ファイルパスの生成（summariesディレクトリを参照）
-        import os
-        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        summaries_dir = os.path.join(current_dir, "summaries")
-        print(f"DEBUG: current_dir = {current_dir}")
-        print(f"DEBUG: summaries_dir = {summaries_dir}")
-        print(f"DEBUG: summaries_dir exists = {os.path.exists(summaries_dir)}")
-        
-        # 議事録IDに基づいてファイルを検索
-        import glob
-        pattern = os.path.join(summaries_dir, f"*_議事録_{meeting_id}.txt")
-        print(f"DEBUG: pattern = {pattern}")
-        matching_files = glob.glob(pattern)
-        print(f"DEBUG: matching_files = {matching_files}")
-        
-        # ディレクトリ内の全ファイルを確認
-        all_files = glob.glob(os.path.join(summaries_dir, "*.txt"))
-        print(f"DEBUG: all_files in summaries = {all_files}")
-        
-        if not matching_files:
-            # ファイルが見つからない場合、利用可能なファイルを表示
-            available_ids = []
-            for file in all_files:
-                filename = os.path.basename(file)
-                if "_議事録_" in filename:
-                    try:
-                        file_id = filename.split("_議事録_")[1].replace(".txt", "")
-                        available_ids.append(file_id)
-                    except:
-                        pass
-            
+        # データベースから要約を取得
+        if not meeting.summary:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"要約ファイルが見つかりません。利用可能なID: {available_ids}"
+                detail="要約が見つかりません"
             )
         
-        file_path = matching_files[0]  # 最初に見つかったファイルを使用
-        print(f"DEBUG: selected file_path = {file_path}")
-        
-        # ファイル内容を読み込んで返す
-        with open(file_path, 'r', encoding='utf-8') as f:
-            summary_content = f.read()
+        print(f"DEBUG: データベースから要約取得 - meeting_id: {meeting_id}")
+        print(f"DEBUG: 要約文字数: {len(meeting.summary)} 文字")
         
         return RecordingResponse(
             success=True,
             message="要約を取得しました",
             data={
-                "summary": summary_content,
+                "summary": meeting.summary,
                 "meeting_id": meeting_id
             }
         )
