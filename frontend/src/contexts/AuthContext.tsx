@@ -13,7 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   token: string | null
-  login: (token: string) => void
+  login: (token: string, userData?: any) => Promise<void>
   logout: () => void
   isLoading: boolean
 }
@@ -55,9 +55,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth()
   }, [token])
 
-  const login = (newToken: string) => {
+  const login = async (newToken: string, userData?: any) => {
     setToken(newToken)
     localStorage.setItem('token', newToken)
+    
+    // ユーザー情報が提供された場合は設定
+    if (userData) {
+      setUser(userData)
+    } else {
+      // ユーザー情報が提供されていない場合は取得
+      try {
+        const userData = await authService.getCurrentUser(newToken)
+        setUser(userData)
+      } catch (error) {
+        console.error('ユーザー情報取得エラー:', error)
+      }
+    }
   }
 
   const logout = () => {
