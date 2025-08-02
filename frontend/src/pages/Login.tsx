@@ -166,8 +166,7 @@ const Login: React.FC = () => {
             className="google-login-button"
             disabled={isLoading}
           >
-            <img src="/google-icon.png" alt="Google" />
-            Googleでログイン
+            🔍 Googleでログイン
           </button>
           
           <button 
@@ -175,8 +174,7 @@ const Login: React.FC = () => {
             className="line-login-button"
             disabled={isLoading}
           >
-            <img src="/line-icon.png" alt="LINE" />
-            LINEでログイン
+            💬 LINEでログイン
           </button>
           
           <button 
