@@ -120,41 +120,100 @@ class AuthService:
             }
         }
     
+    def get_or_create_user_from_line(self, line_user_info: Dict[str, Any], db: Session) -> User:
+        """LINEユーザー情報からユーザーを取得または作成"""
+        line_user_id = line_user_info.get('userId')
+        email = line_user_info.get('email', f"line_{line_user_id}@line.user")
+        
+        # 既存ユーザーを検索
+        user = db.query(User).filter(User.email == email).first()
+        
+        if user:
+            # 既存ユーザーの情報を更新
+            user.name = line_user_info.get('displayName', user.name)
+            user.picture = line_user_info.get('pictureUrl', user.picture)
+            db.commit()
+            return user
+        else:
+            # 新規ユーザーを作成
+            new_user = User(
+                email=email,
+                name=line_user_info.get('displayName', ''),
+                picture=line_user_info.get('pictureUrl', ''),
+                is_premium=False,
+                auth_provider='line'
+            )
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            return new_user
+
     async def verify_line_token(self, code: str) -> Dict[str, Any]:
-        """LINE OAuthトークンを検証（簡易版）"""
+        """LINE OAuth2.0トークンを検証"""
         try:
-            # 簡易版 - 実際の検証は無効化
-            raise ValueError("LINE OAuthは現在無効化されています")
-        except ValueError as e:
-            raise e
+            import requests
+            
+            # LINE OAuth2.0トークンエンドポイント
+            token_url = "https://api.line.me/oauth2/v2.1/token"
+            
+            # アクセストークンを取得
+            token_data = {
+                'grant_type': 'authorization_code',
+                'code': code,
+                'redirect_uri': settings.LINE_REDIRECT_URI,
+                'client_id': settings.LINE_CHANNEL_ID,
+                'client_secret': settings.LINE_CHANNEL_SECRET,
+            }
+            
+            token_response = requests.post(token_url, data=token_data)
+            token_response.raise_for_status()
+            token_info = token_response.json()
+            
+            # ユーザー情報を取得
+            profile_url = "https://api.line.me/v2/profile"
+            headers = {
+                'Authorization': f"Bearer {token_info['access_token']}"
+            }
+            
+            profile_response = requests.get(profile_url, headers=headers)
+            profile_response.raise_for_status()
+            user_info = profile_response.json()
+            
+            return user_info
+            
         except Exception as e:
-            raise ValueError(f"LINEトークンの検証に失敗しました: {str(e)}")
-    
+            print(f"LINE認証エラー: {e}")
+            raise ValueError(f"LINE認証に失敗しました: {str(e)}")
+
     def is_trial_valid(self, user) -> bool:
-        """無料期間が有効かチェック（簡易版）"""
-        try:
-            # 簡易版 - 常にTrueを返す
+        """無料期間が有効かチェック"""
+        if user.is_premium == "true":
             return True
-        except Exception as e:
-            # エラーの場合は安全のためFalseを返す
-            return False
-    
+        
+        trial_end = user.trial_start_date + timedelta(days=31)
+        return datetime.utcnow() < trial_end
+
     def get_trial_remaining_days(self, user) -> int:
-        """無料期間の残り日数を取得（簡易版）"""
-        try:
-            # 簡易版 - 常に30日を返す
-            return 30
-        except Exception:
-            return 0
-    
+        """無料期間の残り日数を取得"""
+        if user.is_premium == "true":
+            return 999  # プレミアムユーザー
+        
+        trial_end = user.trial_start_date + timedelta(days=31)
+        remaining = (trial_end - datetime.utcnow()).days
+        return max(0, remaining)
+
     def get_usage_remaining(self, user) -> int:
-        """残り利用回数を取得（簡易版）"""
-        try:
-            # 簡易版 - 常に10回を返す
-            return 10
-        except Exception:
-            return 0
-    
+        """残り利用回数を取得"""
+        if user.is_premium == "true":
+            return 999  # プレミアムユーザー
+        
+        used = user.usage_count
+        return max(0, 10 - used)
+
     def get_current_user_token(self, token: str) -> str:
-        """現在のユーザートークンを取得（依存性注入用）"""
-        return token 
+        """現在のユーザーのトークンを取得"""
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            return payload.get("sub")
+        except jwt.PyJWTError:
+            raise ValueError("無効なトークンです") 

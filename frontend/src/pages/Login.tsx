@@ -35,7 +35,7 @@ const Login: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        await login(data.data.access_token, data.data.user);
+        await login(data.data.access_token);
         navigate('/');
       } else {
         setError(data.detail || 'ログインに失敗しました');
@@ -91,7 +91,7 @@ const Login: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        await login(data.data.access_token, data.data.user);
+        await login(data.data.access_token);
         navigate('/');
       } else {
         setError(data.detail || 'ダミーログインに失敗しました');

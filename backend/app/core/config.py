@@ -6,6 +6,13 @@ class Settings(BaseSettings):
     # データベース設定
     DATABASE_URL: str = "sqlite:///./meeting_summary.db"
     
+    # PostgreSQLの場合、URLを調整
+    @property
+    def database_url(self) -> str:
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
+    
     # JWT設定
     SECRET_KEY: str = "your-secret-key-here"
     ALGORITHM: str = "HS256"
