@@ -38,6 +38,20 @@ class Settings(BaseSettings):
     LINE_CHANNEL_SECRET: str = ""
     LINE_REDIRECT_URI: str = ""
     
+    # ファイル設定
+    MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
+    UPLOAD_DIR: str = "uploads"
+    AUDIO_CHUNKS_DIR: str = "audio_chunks"
+    SUMMARIES_DIR: str = "summaries"
+    
+    # 録音設定
+    FREE_RECORDING_LIMIT: int = 30  # 分
+    PREMIUM_RECORDING_LIMIT: int = 120  # 分
+    
+    # レート制限設定
+    RATE_LIMIT_MAX_REQUESTS: int = 100
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    
     class Config:
         env_file = ".env"
 
