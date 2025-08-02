@@ -23,7 +23,7 @@ export interface User {
   id: number
   email: string
   name: string
-  is_premium: boolean
+  is_premium: string  // booleanからstringに変更
   usage_count: number
   trial_start_date: string
 }

@@ -84,7 +84,7 @@ const Recording: React.FC = () => {
         // 録音時間制限を設定（無料ユーザーは30分、プレミアムユーザーは2時間）
         const isPremium = String(user?.is_premium) === "true"
         const maxDuration = isPremium ? 120 : 30
-        console.log('フロントエンドプレミアム状態:', user?.is_premium, '判定結果:', isPremium, '最大時間:', maxDuration)
+        console.log('フロントエンドプレミアム状態:', user?.is_premium, '型:', typeof user?.is_premium, '判定結果:', isPremium, '最大時間:', maxDuration)
         setMaxDuration(maxDuration)
         setRecordingTime(0)
         
