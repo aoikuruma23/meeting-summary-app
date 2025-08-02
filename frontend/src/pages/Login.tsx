@@ -24,7 +24,7 @@ const Login: React.FC = () => {
         ? { email, password, name }
         : { email, password };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/dummy`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/auth/dummy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
