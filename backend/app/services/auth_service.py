@@ -1,55 +1,124 @@
+import os
+import jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-import jwt
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from google.auth.exceptions import GoogleAuthError
 from app.core.config import settings
+from app.models.user import User
+from app.core.database import get_db
+from sqlalchemy.orm import Session
 
 class AuthService:
     def __init__(self):
         self.secret_key = settings.SECRET_KEY
-        self.algorithm = settings.ALGORITHM
+        self.algorithm = "HS256"
         self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    
-    def create_access_token(self, data: dict) -> str:
-        """JWTアクセストークンを生成"""
-        try:
-            to_encode = data.copy()
+
+    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None):
+        to_encode = data.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
             expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire_minutes)
-            to_encode.update({"exp": expire, "iat": datetime.utcnow()})
-            encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
-            return encoded_jwt
-        except Exception as e:
-            raise ValueError(f"トークン生成に失敗しました: {str(e)}")
-    
-    def verify_token(self, token: str) -> str:
-        """JWTトークンを検証"""
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+        return encoded_jwt
+
+    def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            email: str = payload.get("sub")
-            if email is None:
-                raise ValueError("無効なトークンです")
-            
-            # トークンの有効期限をチェック
-            exp = payload.get("exp")
-            if exp and datetime.utcnow() > datetime.fromtimestamp(exp):
-                raise ValueError("トークンの有効期限が切れています")
-            
-            return email
-        except jwt.ExpiredSignatureError:
-            raise ValueError("トークンの有効期限が切れています")
-        except jwt.InvalidTokenError:
-            raise ValueError("無効なトークンです")
-        except Exception as e:
-            raise ValueError(f"トークン検証に失敗しました: {str(e)}")
-    
-    async def verify_google_token(self, token: str) -> Dict[str, Any]:
-        """Google IDトークンを検証（簡易版）"""
+            return payload
+        except jwt.PyJWTError:
+            return None
+
+    def authenticate_user(self, email: str, password: str) -> Optional[User]:
+        # ダミーユーザー認証（既存）
+        if email == "dummy@example.com" and password == "password":
+            return User(
+                id=1,
+                email="dummy@example.com",
+                name="テストユーザー",
+                is_premium=False
+            )
+        return None
+
+    def verify_google_token(self, id_token_str: str) -> Optional[Dict[str, Any]]:
+        """Google IDトークンを検証"""
         try:
-            # 簡易版 - 実際の検証は無効化
-            raise ValueError("Google OAuthは現在無効化されています")
+            # Googleの公開鍵でトークンを検証
+            idinfo = id_token.verify_oauth2_token(
+                id_token_str, 
+                requests.Request(), 
+                settings.GOOGLE_CLIENT_ID
+            )
+            
+            # 発行者とクライアントIDを確認
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Wrong issuer.')
+            
+            return idinfo
+        except GoogleAuthError as e:
+            print(f"Google認証エラー: {e}")
+            return None
         except ValueError as e:
-            raise e
-        except Exception as e:
-            raise ValueError(f"Googleトークンの検証に失敗しました: {str(e)}")
+            print(f"トークン検証エラー: {e}")
+            return None
+
+    def get_or_create_user_from_google(self, google_user_info: Dict[str, Any], db: Session) -> User:
+        """Googleユーザー情報からユーザーを取得または作成"""
+        email = google_user_info.get('email')
+        
+        # 既存ユーザーを検索
+        user = db.query(User).filter(User.email == email).first()
+        
+        if user:
+            # 既存ユーザーの情報を更新
+            user.name = google_user_info.get('name', user.name)
+            user.picture = google_user_info.get('picture', user.picture)
+            db.commit()
+            return user
+        else:
+            # 新規ユーザーを作成
+            new_user = User(
+                email=email,
+                name=google_user_info.get('name', ''),
+                picture=google_user_info.get('picture', ''),
+                is_premium=False,
+                auth_provider='google'
+            )
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            return new_user
+
+    def login_with_google(self, id_token_str: str, db: Session) -> Optional[Dict[str, Any]]:
+        """Googleログイン処理"""
+        # Googleトークンを検証
+        google_user_info = self.verify_google_token(id_token_str)
+        if not google_user_info:
+            return None
+        
+        # ユーザーを取得または作成
+        user = self.get_or_create_user_from_google(google_user_info, db)
+        
+        # アクセストークンを生成
+        access_token = self.create_access_token(
+            data={"sub": str(user.id), "email": user.email}
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "is_premium": user.is_premium,
+                "picture": user.picture
+            }
+        }
     
     async def verify_line_token(self, code: str) -> Dict[str, Any]:
         """LINE OAuthトークンを検証（簡易版）"""

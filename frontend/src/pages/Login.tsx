@@ -1,128 +1,204 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-// import { authService } from '../services/authService'
-import './Login.css'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import './Login.css';
 
 const Login: React.FC = () => {
-  const { login } = useAuth()
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    try {
-      // Google OAuthの実装（簡略化）
-      alert('Googleログイン機能は準備中です')
-    } catch (error) {
-      console.error('Googleログインエラー:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-  const handleLineLogin = async () => {
-    setLoading(true)
     try {
-      // LINE OAuthの実装（簡略化）
-      alert('LINEログイン機能は準備中です')
-    } catch (error) {
-      console.error('LINEログインエラー:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      const endpoint = isRegistering ? '/auth/register' : '/auth/login';
+      const body = isRegistering 
+        ? { email, password, name }
+        : { email, password };
 
-  const handleDummyLogin = async () => {
-    setLoading(true)
-    try {
-      // ダミーログインAPIを呼び出し
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'
-      const response = await fetch(`${apiUrl}/api/auth/dummy`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-      })
-      
-      if (!response.ok) {
-        throw new Error('ダミーログインに失敗しました')
-      }
-      
-      const data = await response.json()
-      if (data.success && data.data) {
-        const token = data.data.access_token
-        await login(token)
-        // ログイン成功後、ホーム画面に遷移
-        navigate('/')
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await login(data.data.access_token, data.data.user);
+        navigate('/');
       } else {
-        throw new Error(data.message || 'ダミーログインに失敗しました')
+        setError(data.detail || 'ログインに失敗しました');
       }
-    } catch (error) {
-      console.error('ダミーログインエラー:', error)
-      const errorMessage = error instanceof Error ? error.message : 'ダミーログインに失敗しました'
-      alert('ダミーログインに失敗しました: ' + errorMessage)
+    } catch (err) {
+      setError('ネットワークエラーが発生しました');
     } finally {
-      setLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Google OAuth2.0の実装
+      // 実際の実装ではGoogle Identity Servicesを使用
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${window.location.origin}/auth/callback&response_type=token&scope=email profile`;
+      window.location.href = googleAuthUrl;
+    } catch (err) {
+      setError('Googleログインに失敗しました');
+      setIsLoading(false);
+    }
+  };
+
+  const handleLineLogin = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // LINE OAuth2.0の実装
+      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${import.meta.env.VITE_LINE_CHANNEL_ID}&redirect_uri=${window.location.origin}/auth/callback&state=line&scope=profile openid email`;
+      window.location.href = lineAuthUrl;
+    } catch (err) {
+      setError('LINEログインに失敗しました');
+      setIsLoading(false);
+    }
+  };
+
+  const handleDummyLogin = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/dummy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await login(data.data.access_token, data.data.user);
+        navigate('/');
+      } else {
+        setError(data.detail || 'ダミーログインに失敗しました');
+      }
+    } catch (err) {
+      setError('ネットワークエラーが発生しました');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>🎤 ログイン</h1>
-        <p>議事録要約Webアプリにログインしてください</p>
+        <h1>{isRegistering ? 'アカウント作成' : 'ログイン'}</h1>
         
-        <div className="login-buttons">
+        {error && <div className="error-message">{error}</div>}
+        
+        <form onSubmit={handleSubmit} className="login-form">
+          {isRegistering && (
+            <div className="form-group">
+              <label htmlFor="name">お名前</label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="お名前を入力"
+              />
+            </div>
+          )}
+          
+          <div className="form-group">
+            <label htmlFor="email">メールアドレス</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="example@email.com"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="password">パスワード</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="パスワードを入力"
+            />
+          </div>
+          
           <button 
-            onClick={handleDummyLogin}
-            disabled={loading}
-            className="login-button dummy"
+            type="submit" 
+            className="login-button"
+            disabled={isLoading}
           >
-            <span className="icon">🧪</span>
-            ダミーログイン（テスト用）
+            {isLoading ? '処理中...' : (isRegistering ? 'アカウント作成' : 'ログイン')}
           </button>
+        </form>
+        
+        <div className="social-login">
+          <h3>ソーシャルログイン</h3>
           
           <button 
             onClick={handleGoogleLogin}
-            disabled={loading}
-            className="login-button google"
+            className="google-login-button"
+            disabled={isLoading}
           >
-            <span className="icon">🔍</span>
-            Googleでログイン（準備中）
+            <img src="/google-icon.png" alt="Google" />
+            Googleでログイン
           </button>
           
           <button 
             onClick={handleLineLogin}
-            disabled={loading}
-            className="login-button line"
+            className="line-login-button"
+            disabled={isLoading}
           >
-            <span className="icon">💬</span>
-            LINEでログイン（準備中）
+            <img src="/line-icon.png" alt="LINE" />
+            LINEでログイン
+          </button>
+          
+          <button 
+            onClick={handleDummyLogin}
+            className="dummy-login-button"
+            disabled={isLoading}
+          >
+            🧪 テストログイン
           </button>
         </div>
         
-        {loading && (
-          <div className="loading">
-            <div className="loading-spinner"></div>
-            ログイン中...
-          </div>
-        )}
-        
-        <div className="login-info">
-          <p>初回ログインでアカウントが作成されます</p>
-          <div className="free-trial-info">
-            <h3>📅 無料期間について</h3>
-            <ul>
-              <li>✅ 31日間 + 翌月1日まで</li>
-              <li>✅ または10回利用まで</li>
-              <li>✅ どちらか早い方で終了</li>
-            </ul>
-          </div>
+        <div className="login-footer">
+          <button 
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="toggle-button"
+          >
+            {isRegistering ? '既にアカウントをお持ちですか？' : 'アカウントをお持ちでないですか？'}
+          </button>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login 
+export default Login; 

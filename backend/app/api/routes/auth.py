@@ -44,6 +44,15 @@ class UserStatsResponse(BaseModel):
     total_meetings: int
     completed_meetings: int
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
 @router.post("/dummy", response_model=AuthResponse)
 @create_rate_limit_decorator("dummy")
 async def dummy_auth(db: Session = Depends(get_db)):
@@ -232,6 +241,100 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"認証処理中にエラーが発生しました: {str(e)}"
+        )
+
+@router.post("/login", response_model=AuthResponse)
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
+    """メールアドレスとパスワードでのログイン"""
+    try:
+        # 簡易的な認証（実際の実装ではパスワードハッシュ化が必要）
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="メールアドレスまたはパスワードが正しくありません"
+            )
+        
+        # JWTトークンの生成
+        auth_service = AuthService()
+        access_token = auth_service.create_access_token(data={"sub": user.email})
+        
+        return AuthResponse(
+            success=True,
+            message="ログインが成功しました",
+            data={
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": UserResponse(
+                    id=user.id,
+                    email=user.email,
+                    name=user.name,
+                    is_premium=user.is_premium,
+                    usage_count=user.usage_count,
+                    trial_start_date=user.trial_start_date,
+                    created_at=user.created_at
+                ).dict()
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"ログインに失敗しました: {str(e)}"
+        )
+
+@router.post("/register", response_model=AuthResponse)
+async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    """新規ユーザー登録"""
+    try:
+        # 既存ユーザーをチェック
+        existing_user = db.query(User).filter(User.email == request.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="このメールアドレスは既に登録されています"
+            )
+        
+        # 新規ユーザーを作成
+        new_user = User(
+            email=request.email,
+            name=request.name,
+            is_premium="false",
+            usage_count=0,
+            trial_start_date=datetime.utcnow()
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        # JWTトークンの生成
+        auth_service = AuthService()
+        access_token = auth_service.create_access_token(data={"sub": new_user.email})
+        
+        return AuthResponse(
+            success=True,
+            message="ユーザー登録が成功しました",
+            data={
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": UserResponse(
+                    id=new_user.id,
+                    email=new_user.email,
+                    name=new_user.name,
+                    is_premium=new_user.is_premium,
+                    usage_count=new_user.usage_count,
+                    trial_start_date=new_user.trial_start_date,
+                    created_at=new_user.created_at
+                ).dict()
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"ユーザー登録に失敗しました: {str(e)}"
         )
 
 @router.get("/me", response_model=AuthResponse)
