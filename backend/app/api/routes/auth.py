@@ -65,7 +65,7 @@ async def dummy_auth(db: Session = Depends(get_db)):
             id=1,
             email="dummy@example.com",
             name="テストユーザー",
-            is_premium="false",
+            is_premium="true",  # falseからtrueに変更
             usage_count=0,
             trial_start_date=current_time,
             created_at=current_time
@@ -358,7 +358,7 @@ async def get_current_user(
                 id=1,
                 email="dummy@example.com",
                 name="テストユーザー",
-                is_premium="false",
+                is_premium="true",  # falseからtrueに変更
                 usage_count=0,
                 trial_start_date=current_time,
                 created_at=current_time
