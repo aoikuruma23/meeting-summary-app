@@ -52,8 +52,14 @@ const Login: React.FC = () => {
     setError('');
 
     try {
+      // Google OAuth設定が完了していない場合の処理
+      if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        setError('Googleログインは現在準備中です。ダミーログインをご利用ください。');
+        setIsLoading(false);
+        return;
+      }
+
       // Google OAuth2.0の実装
-      // 実際の実装ではGoogle Identity Servicesを使用
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${window.location.origin}/auth/callback&response_type=token&scope=email profile`;
       window.location.href = googleAuthUrl;
     } catch (err) {
@@ -67,6 +73,13 @@ const Login: React.FC = () => {
     setError('');
 
     try {
+      // LINE OAuth設定が完了していない場合の処理
+      if (!import.meta.env.VITE_LINE_CHANNEL_ID) {
+        setError('LINEログインは現在準備中です。ダミーログインをご利用ください。');
+        setIsLoading(false);
+        return;
+      }
+
       // LINE OAuth2.0の実装
       const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${import.meta.env.VITE_LINE_CHANNEL_ID}&redirect_uri=${window.location.origin}/auth/callback&state=line&scope=profile openid email`;
       window.location.href = lineAuthUrl;

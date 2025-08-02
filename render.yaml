@@ -22,6 +22,16 @@ services:
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ID
+        sync: false
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_REDIRECT_URI
+        value: "https://meeting-summary-app.onrender.com/auth/callback"
       - key: DUMMY_LOGIN_ENABLED
         value: "true"
       - key: FREE_TRIAL_DAYS
@@ -30,8 +40,6 @@ services:
         value: "10"
       - key: MONTHLY_PRICE
         value: "980"
-    # データベース接続の環境変数を追加
-    envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: meeting-summary-db
