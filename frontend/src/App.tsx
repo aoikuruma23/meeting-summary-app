@@ -8,6 +8,7 @@ import History from './pages/History'
 import Settings from './pages/Settings'
 import Billing from './pages/Billing'
 import Login from './pages/Login'
+import Help from './pages/Help'
 import './App.css'
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/billing" element={<Billing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/help" element={<Help />} />
             </Routes>
           </main>
         </div>

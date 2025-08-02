@@ -27,6 +27,7 @@ const Header: React.FC = () => {
               <Link to="/history" className="nav-link">履歴</Link>
               <Link to="/billing" className="nav-link">プラン</Link>
               <Link to="/settings" className="nav-link">設定</Link>
+              <Link to="/help" className="nav-link">ヘルプ</Link>
               <div className="user-info">
                 <span className="user-name">{user.name}</span>
                 {user.is_premium && <span className="premium-badge">プレミアム</span>}

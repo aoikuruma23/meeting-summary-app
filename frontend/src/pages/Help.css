@@ -1,0 +1,161 @@
+.help-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.help-content {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.help-content h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+.help-section {
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 15px;
+  border-left: 5px solid #667eea;
+}
+
+.help-section h2 {
+  color: #333;
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  font-weight: bold;
+}
+
+.help-item {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.help-item h3 {
+  color: #667eea;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.help-item h4 {
+  color: #555;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.help-item ol,
+.help-item ul {
+  padding-left: 1.5rem;
+  line-height: 1.8;
+}
+
+.help-item li {
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+.help-item p {
+  line-height: 1.6;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.troubleshoot-item {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #fff5f5;
+  border-radius: 8px;
+  border-left: 3px solid #ff6b6b;
+}
+
+.troubleshoot-item h4 {
+  color: #d63031;
+  margin-bottom: 0.5rem;
+}
+
+.troubleshoot-item p {
+  color: #666;
+  margin: 0;
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .help-container {
+    padding: 1rem;
+  }
+  
+  .help-content {
+    padding: 1.5rem;
+  }
+  
+  .help-content h1 {
+    font-size: 2rem;
+  }
+  
+  .help-section h2 {
+    font-size: 1.5rem;
+  }
+  
+  .help-item h3 {
+    font-size: 1.2rem;
+  }
+  
+  .help-section {
+    padding: 1rem;
+  }
+  
+  .help-item {
+    padding: 0.8rem;
+  }
+}
+
+/* アニメーション */
+.help-section {
+  transition: transform 0.3s ease;
+}
+
+.help-section:hover {
+  transform: translateY(-2px);
+}
+
+.help-item {
+  transition: all 0.3s ease;
+}
+
+.help-item:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* スクロールバー */
+.help-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.help-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.help-container::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.help-container::-webkit-scrollbar-thumb:hover {
+  background: #5a6fd8;
+} 
