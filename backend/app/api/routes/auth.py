@@ -27,7 +27,7 @@ class UserResponse(BaseModel):
     is_premium: str
     usage_count: int
     trial_start_date: datetime
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
 class GoogleAuthRequest(BaseModel):
     token: str
@@ -58,6 +58,8 @@ class RegisterRequest(BaseModel):
 async def dummy_auth(db: Session = Depends(get_db)):
     """ダミー認証（テスト用）"""
     try:
+        current_time = datetime.utcnow()
+        
         # ダミーユーザーの作成
         user = User(
             id=1,
@@ -65,7 +67,8 @@ async def dummy_auth(db: Session = Depends(get_db)):
             name="テストユーザー",
             is_premium="false",
             usage_count=0,
-            trial_start_date=datetime.utcnow()
+            trial_start_date=current_time,
+            created_at=current_time
         )
         
         # JWTトークンの生成
@@ -350,13 +353,15 @@ async def get_current_user(
         
         # ダミーユーザーの場合
         if user_email == "dummy@example.com":
+            current_time = datetime.utcnow()
             user = User(
                 id=1,
                 email="dummy@example.com",
                 name="テストユーザー",
                 is_premium="false",
                 usage_count=0,
-                trial_start_date=datetime.utcnow()
+                trial_start_date=current_time,
+                created_at=current_time
             )
         else:
             # データベースからユーザーを取得
