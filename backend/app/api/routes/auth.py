@@ -58,21 +58,15 @@ class RegisterRequest(BaseModel):
 async def dummy_auth(db: Session = Depends(get_db)):
     """ダミー認証（テスト用）"""
     try:
-        # ダミーユーザーの取得または作成
-        user = db.query(User).filter(User.username == "dummy_user").first()
-        if not user:
-            # ダミーユーザーを作成
-            user = User(
-                username="dummy_user",
-                email="dummy@example.com",
-                name="ダミーユーザー",
-                is_premium="false",
-                usage_count=0,
-                trial_start_date=datetime.utcnow()
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
+        # ダミーユーザーの作成
+        user = User(
+            id=1,
+            email="dummy@example.com",
+            name="テストユーザー",
+            is_premium="false",
+            usage_count=0,
+            trial_start_date=datetime.utcnow()
+        )
         
         # JWTトークンの生成
         auth_service = AuthService()
@@ -97,6 +91,7 @@ async def dummy_auth(db: Session = Depends(get_db)):
         )
     
     except Exception as e:
+        print(f"dummy_auth error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"ダミー認証に失敗しました: {str(e)}"
@@ -346,13 +341,32 @@ async def get_current_user(
     try:
         auth_service = AuthService()
         user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
         
-        if not user:
+        if not user_email:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="無効なトークンです"
             )
+        
+        # ダミーユーザーの場合
+        if user_email == "dummy@example.com":
+            user = User(
+                id=1,
+                email="dummy@example.com",
+                name="テストユーザー",
+                is_premium="false",
+                usage_count=0,
+                trial_start_date=datetime.utcnow()
+            )
+        else:
+            # データベースからユーザーを取得
+            user = db.query(User).filter(User.email == user_email).first()
+            
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="ユーザーが見つかりません"
+                )
         
         return AuthResponse(
             success=True,
@@ -369,12 +383,10 @@ async def get_current_user(
                 ).dict()
             }
         )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="無効なトークンです"
-        )
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"get_current_user error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"ユーザー情報の取得に失敗しました: {str(e)}"

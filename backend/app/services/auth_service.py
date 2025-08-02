@@ -26,10 +26,11 @@ class AuthService:
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
 
-    def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
+    def verify_token(self, token: str) -> Optional[str]:
+        """JWTトークンを検証してユーザーIDを返す"""
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            return payload
+            return payload.get("sub")  # ユーザーIDを返す
         except jwt.PyJWTError:
             return None
 
