@@ -1,8 +1,8 @@
-# 🔌 会議要約アプリ API仕様書
+# 🔌 会議要約アプリ API仕様書（公開版）
 
 ## 🎯 概要
 
-会議要約アプリのRESTful API仕様書です。FastAPIベースのバックエンドAPIの詳細な仕様を記載しています。
+会議要約アプリのRESTful API仕様書です。開発者向けにAPIの使用方法を説明しています。
 
 ## 🔐 認証
 
@@ -256,26 +256,6 @@ Authorization: Bearer <token>
 }
 ```
 
-#### Stripe Webhook
-```http
-POST /api/billing/webhook
-Content-Type: application/json
-```
-
-**リクエスト**:
-```json
-{
-  "type": "checkout.session.completed",
-  "data": {
-    "object": {
-      "id": "cs_test_1234567890",
-      "customer": "cus_1234567890",
-      "subscription": "sub_1234567890"
-    }
-  }
-}
-```
-
 ## 📊 データモデル
 
 ### User
@@ -316,13 +296,7 @@ Content-Type: application/json
 - **その他**: 100回/分
 
 ### CORS設定
-```python
-origins = [
-    "http://localhost:3000",
-    "https://meeting-summary-app.onrender.com",
-    "https://your-frontend-domain.com"
-]
-```
+許可されたオリジンのみアクセス可能です。
 
 ### 入力検証
 - **文字列**: 最大1000文字
@@ -411,17 +385,6 @@ python -m pytest backend/tests/
 
 # 特定のテスト
 python -m pytest backend/tests/test_auth.py
-```
-
-### 環境変数
-```env
-# 開発環境
-DATABASE_URL=sqlite:///./meeting_summary.db
-OPENAI_API_KEY=your_openai_api_key
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-SECRET_KEY=your_secret_key
-ENCRYPTION_KEY=your_encryption_key
 ```
 
 ## 📞 サポート

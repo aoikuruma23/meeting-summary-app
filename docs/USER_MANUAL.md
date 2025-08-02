@@ -92,9 +92,8 @@
 ## 📞 サポート
 
 ### お問い合わせ方法
-- 📧 **メール**: support@meeting-summary-app.com
-- 💬 **チャット**: アプリ内チャット（プレミアム会員）
-- 📱 **電話**: 平日 9:00-18:00（プレミアム会員）
+- 📧 **メール**: jibunkaikakulab@gmail.com
+- 💬 **LINE**: [@meeting-summary-app](https://lin.ee/HQWdapv)
 
 ### サポート時間
 - **無料会員**: メールサポート（24時間以内）

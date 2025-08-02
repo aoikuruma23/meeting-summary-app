@@ -217,9 +217,8 @@ psql $DATABASE_URL < backup.sql
 ## 📞 サポート・連絡先
 
 ### 緊急時連絡先
-- **技術サポート**: tech@meeting-summary-app.com
-- **緊急時**: +81-XX-XXXX-XXXX
-- **Slack**: #meeting-summary-support
+- **技術サポート**: jibunkaikakulab@gmail.com
+- **LINE**: [@meeting-summary-app](https://lin.ee/HQWdapv)
 
 ### エスカレーション手順
 1. 初期対応（30分以内）

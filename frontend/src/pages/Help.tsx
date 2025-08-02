@@ -95,9 +95,8 @@ const Help: React.FC = () => {
             <h3>お問い合わせ</h3>
             <p>問題が解決しない場合は、以下の方法でサポートにお問い合わせください：</p>
             <ul>
-              <li>📧 メール: support@meeting-summary-app.com</li>
-              <li>💬 チャット: アプリ内チャット（プレミアム会員）</li>
-              <li>📱 電話: 平日 9:00-18:00（プレミアム会員）</li>
+              <li>📧 メール: jibunkaikakulab@gmail.com</li>
+              <li>💬 LINE: <a href="https://lin.ee/HQWdapv" target="_blank" rel="noopener noreferrer">@meeting-summary-app</a></li>
             </ul>
           </div>
         </section>
