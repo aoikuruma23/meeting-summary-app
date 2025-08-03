@@ -10,6 +10,7 @@ AI-powered meeting transcription and summarization application with premium feat
 - **AI Summarization**: Automatic meeting summarization using ChatGPT API
 - **History Management**: View and manage past meeting summaries
 - **User Authentication**: Secure user authentication with JWT tokens
+- **Google OAuth**: Google account login integration
 
 ### Premium Features
 - **Extended Recording Time**: 2 hours (vs 30 minutes for free users)
@@ -31,7 +32,7 @@ AI-powered meeting transcription and summarization application with premium feat
 - **Database**: SQLAlchemy + SQLite
 - **AI Services**: OpenAI Whisper + ChatGPT
 - **Payment**: Stripe
-- **Authentication**: JWT
+- **Authentication**: JWT + Google OAuth
 
 ### Frontend
 - **Framework**: React + TypeScript
@@ -107,6 +108,10 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
 # Security
 SECRET_KEY=your_secret_key
 ENCRYPTION_KEY=your_encryption_key
@@ -125,7 +130,8 @@ MONTHLY_PRICE=980
    - Frontend: `npm run dev` (runs on http://localhost:3000)
 
 2. **Login**
-   - Use dummy login for testing: `dummy@example.com`
+   - Use Google OAuth login
+   - Or use dummy login for testing: `dummy@example.com`
 
 3. **Record a Meeting**
    - Click "録音開始" on the home page
@@ -159,6 +165,7 @@ MONTHLY_PRICE=980
 - **CORS**: Cross-origin resource sharing
 - **JWT Authentication**: Secure user sessions
 - **File Security**: Secure audio file handling
+- **OAuth Integration**: Secure third-party authentication
 
 ## 📁 Project Structure
 
@@ -204,6 +211,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Stripe for payment processing
 - FastAPI for the backend framework
 - React for the frontend framework
+- Google for OAuth authentication
 
 ## 📞 Support
 
@@ -211,4 +219,4 @@ For support, email support@meeting-summary-app.com or create an issue in this re
 
 ---
 
-**Note**: This is a development version. For production use, ensure proper security configurations and environment setup. 
+**Note**: This is a development version. For production use, ensure proper security configurations and environment setup.
