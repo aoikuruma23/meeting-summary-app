@@ -29,9 +29,13 @@ export interface User {
 }
 
 export interface AuthResponse {
-  access_token: string
-  token_type: string
-  user: User
+  success: boolean
+  message: string
+  data?: {
+    access_token: string
+    token_type: string
+    user: User
+  }
 }
 
 class AuthService {

@@ -56,7 +56,7 @@ const AuthCallback: React.FC = () => {
         
         console.log('DEBUG: 認証APIレスポンス:', response);
         
-        if (response.success) {
+        if (response.success && response.data) {
           await login(response.data.access_token, response.data.user);
           navigate('/');
         } else {
