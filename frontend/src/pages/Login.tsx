@@ -54,7 +54,7 @@ const Login: React.FC = () => {
     try {
       // Google OAuth設定が完了していない場合の処理
       // Google Cloud Consoleで取得したクライアントIDを環境変数に設定してください
-      const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "666039610454-j9rujj1aqaotuidr8dt182blna6prugm.apps.googleusercontent.com";
+      const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id.apps.googleusercontent.com";
       
       if (!googleClientId || googleClientId === 'your-google-client-id' || googleClientId === 'test-google-client-id' || googleClientId === 'your-actual-google-client-id.apps.googleusercontent.com') {
         setError('Googleログインは現在準備中です。ダミーログインをご利用ください。');

@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     # 2. プロジェクトを作成または選択
     # 3. 「APIとサービス」→「認証情報」でOAuth 2.0クライアントIDを作成
     # 4. 承認済みリダイレクトURI: http://localhost:3000/auth/callback, https://meeting-summary-app.onrender.com/auth/callback
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "666039610454-j9rujj1aqaotuidr8dt182blna6prugm.apps.googleusercontent.com")
-    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "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")
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id.apps.googleusercontent.com")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
     
     # LINE OAuth設定
     LINE_CHANNEL_ID: str = ""
@@ -84,4 +84,5 @@ settings = Settings()
 print(f"DEBUG: OPENAI_API_KEY設定確認 - Key exists: {bool(settings.OPENAI_API_KEY)}")
 print(f"DEBUG: OPENAI_API_KEY長さ: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}")
 print(f"DEBUG: GOOGLE_CLIENT_ID設定確認 - Key exists: {bool(settings.GOOGLE_CLIENT_ID)}")
-print(f"DEBUG: GOOGLE_CLIENT_ID値: {settings.GOOGLE_CLIENT_ID}") 
+# セキュリティのため、実際の値は出力しない
+print(f"DEBUG: GOOGLE_CLIENT_ID設定済み: {settings.GOOGLE_CLIENT_ID != 'your-google-client-id.apps.googleusercontent.com'}") 
