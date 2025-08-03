@@ -24,7 +24,7 @@ const Login: React.FC = () => {
         ? { email, password, name }
         : { email, password };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api${endpoint}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,14 +53,18 @@ const Login: React.FC = () => {
 
     try {
       // Google OAuth設定が完了していない場合の処理
-      if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+      // Google Cloud Consoleで取得したクライアントIDを環境変数に設定してください
+      const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "666039610454-j9rujj1aqaotuidr8dt182blna6prugm.apps.googleusercontent.com";
+      
+      if (!googleClientId || googleClientId === 'your-google-client-id' || googleClientId === 'test-google-client-id' || googleClientId === 'your-actual-google-client-id.apps.googleusercontent.com') {
         setError('Googleログインは現在準備中です。ダミーログインをご利用ください。');
         setIsLoading(false);
         return;
       }
 
-      // Google OAuth2.0の実装
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${window.location.origin}/auth/callback&response_type=token&scope=email profile`;
+      // Google OAuth2.0の実装 - IDトークンを取得
+      const redirectUri = `${window.location.origin}/auth/callback`;
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid email profile&nonce=${Date.now()}`;
       window.location.href = googleAuthUrl;
     } catch (err) {
       setError('Googleログインに失敗しました');
@@ -94,7 +98,7 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/auth/dummy`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/dummy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,6 +185,9 @@ const Login: React.FC = () => {
           >
             🔍 Googleでログイン
           </button>
+          <p className="login-note">
+            ※ Googleアカウントでログインできます
+          </p>
           
           <button 
             onClick={handleLineLogin}
@@ -189,6 +196,9 @@ const Login: React.FC = () => {
           >
             💬 LINEでログイン
           </button>
+          <p className="login-note">
+            ※ LINEログインは現在準備中です。ダミーログインをご利用ください。
+          </p>
           
           <button 
             onClick={handleDummyLogin}
@@ -197,6 +207,9 @@ const Login: React.FC = () => {
           >
             🧪 テストログイン
           </button>
+          <p className="login-note">
+            ※ テスト用アカウントでログインできます。機能をお試しください。
+          </p>
         </div>
         
         <div className="login-footer">

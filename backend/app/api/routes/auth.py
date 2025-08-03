@@ -104,36 +104,82 @@ async def dummy_auth(db: Session = Depends(get_db)):
 async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
     """Google OAuth認証"""
     try:
+        print(f"DEBUG: Google認証開始 - トークン長さ: {len(request.token) if request.token else 0}")
+        
+        # Google OAuth設定が未完了の場合
+        if not settings.GOOGLE_CLIENT_ID or settings.GOOGLE_CLIENT_ID in ["your-google-client-id", "test-google-client-id", "your-actual-google-client-id.apps.googleusercontent.com"]:
+            print("DEBUG: Google OAuth設定が未完了")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google OAuth設定が完了していません。現在ダミーログインをご利用ください。"
+            )
+        
+        print(f"DEBUG: Google OAuth設定確認 - Client ID: {settings.GOOGLE_CLIENT_ID}")
+        
         auth_service = AuthService()
-        user_info = await auth_service.verify_google_token(request.token)
+        
+        try:
+            user_info = await auth_service.verify_google_token(request.token)
+        except Exception as e:
+            print(f"DEBUG: Googleトークン検証でエラー: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Googleトークンの検証に失敗しました: {str(e)}"
+            )
+        
+        if not user_info:
+            print("DEBUG: Googleトークン検証に失敗")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Googleトークンの検証に失敗しました。再度ログインしてください。"
+            )
+        
+        print(f"DEBUG: Googleトークン検証成功 - ユーザー情報: {user_info}")
         
         # ユーザーの取得または作成
-        user = db.query(User).filter(User.google_id == user_info["sub"]).first()
-        if not user:
-            # 同じメールアドレスのユーザーが存在するかチェック
-            existing_user = db.query(User).filter(User.email == user_info["email"]).first()
-            if existing_user:
-                # 既存ユーザーにGoogle IDを追加
-                existing_user.google_id = user_info["sub"]
-                existing_user.name = user_info["name"]
-                user = existing_user
-            else:
-                # 新規ユーザー作成
-                user = User(
-                    email=user_info["email"],
-                    name=user_info["name"],
-                    google_id=user_info["sub"],
-                    is_premium="false",
-                    usage_count=0,
-                    trial_start_date=datetime.utcnow()
-                )
-                db.add(user)
-            
-            db.commit()
-            db.refresh(user)
+        try:
+            user = db.query(User).filter(User.google_id == user_info["sub"]).first()
+            if not user:
+                # 同じメールアドレスのユーザーが存在するかチェック
+                existing_user = db.query(User).filter(User.email == user_info["email"]).first()
+                if existing_user:
+                    # 既存ユーザーにGoogle IDを追加
+                    existing_user.google_id = user_info["sub"]
+                    existing_user.name = user_info["name"]
+                    user = existing_user
+                    print(f"DEBUG: 既存ユーザーを更新 - ID: {user.id}, Email: {user.email}")
+                else:
+                    # 新規ユーザー作成
+                    user = User(
+                        email=user_info["email"],
+                        name=user_info["name"],
+                        google_id=user_info["sub"],
+                        is_premium="false",
+                        usage_count=0,
+                        trial_start_date=datetime.utcnow()
+                    )
+                    db.add(user)
+                    print(f"DEBUG: 新規ユーザーを作成 - Email: {user.email}")
+                
+                db.commit()
+                db.refresh(user)
+        except Exception as e:
+            print(f"DEBUG: ユーザー作成/更新でエラー: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"ユーザー情報の処理に失敗しました: {str(e)}"
+            )
         
         # JWTトークンの生成
-        access_token = auth_service.create_access_token(data={"sub": user.email})
+        try:
+            access_token = auth_service.create_access_token(data={"sub": user.email})
+            print(f"DEBUG: JWTトークン生成完了 - ユーザー: {user.email}")
+        except Exception as e:
+            print(f"DEBUG: JWTトークン生成でエラー: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"トークン生成に失敗しました: {str(e)}"
+            )
         
         return AuthResponse(
             success=True,
@@ -153,12 +199,18 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
             }
         )
     
+    except HTTPException:
+        raise
     except ValueError as e:
+        print(f"DEBUG: Google認証エラー (ValueError): {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
         )
     except Exception as e:
+        print(f"DEBUG: Google認証エラー (Exception): {e}")
+        import traceback
+        print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"認証処理中にエラーが発生しました: {str(e)}"

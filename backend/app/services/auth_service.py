@@ -45,26 +45,79 @@ class AuthService:
             )
         return None
 
-    def verify_google_token(self, id_token_str: str) -> Optional[Dict[str, Any]]:
+    async def verify_google_token(self, id_token_str: str) -> Optional[Dict[str, Any]]:
         """Google IDトークンを検証"""
         try:
-            # Googleの公開鍵でトークンを検証
-            idinfo = id_token.verify_oauth2_token(
-                id_token_str, 
-                requests.Request(), 
-                settings.GOOGLE_CLIENT_ID
-            )
+            print(f"DEBUG: Googleトークン検証開始 - トークン長さ: {len(id_token_str) if id_token_str else 0}")
             
-            # 発行者とクライアントIDを確認
-            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-                raise ValueError('Wrong issuer.')
+            # Google OAuth設定が未完了の場合
+            if not settings.GOOGLE_CLIENT_ID or settings.GOOGLE_CLIENT_ID in ["your-google-client-id", "test-google-client-id", "your-actual-google-client-id.apps.googleusercontent.com"]:
+                print("DEBUG: Google OAuth設定が未完了")
+                raise ValueError("Google OAuth設定が完了していません。管理者に連絡してください。")
             
-            return idinfo
+            print(f"DEBUG: Googleトークン検証実行 - Client ID: {settings.GOOGLE_CLIENT_ID}")
+            
+            # トークンの形式を確認（IDトークンかアクセストークンか）
+            if id_token_str.startswith('ya29.'):
+                # アクセストークンの場合、Google People APIを使用してユーザー情報を取得
+                print("DEBUG: アクセストークンを検出、Google People APIを使用")
+                return await self.get_user_info_from_access_token(id_token_str)
+            else:
+                # IDトークンの場合、直接検証
+                print("DEBUG: IDトークンを検出、直接検証")
+                idinfo = id_token.verify_oauth2_token(
+                    id_token_str, 
+                    requests.Request(), 
+                    settings.GOOGLE_CLIENT_ID
+                )
+                
+                print(f"DEBUG: Googleトークン検証成功 - 発行者: {idinfo.get('iss')}, クライアントID: {idinfo.get('aud')}")
+                
+                # 発行者とクライアントIDを確認
+                if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                    print(f"DEBUG: 発行者が無効 - 発行者: {idinfo['iss']}")
+                    raise ValueError('Wrong issuer.')
+                
+                return idinfo
         except GoogleAuthError as e:
-            print(f"Google認証エラー: {e}")
+            print(f"DEBUG: Google認証エラー (GoogleAuthError): {e}")
             return None
         except ValueError as e:
-            print(f"トークン検証エラー: {e}")
+            print(f"DEBUG: トークン検証エラー (ValueError): {e}")
+            return None
+        except Exception as e:
+            print(f"DEBUG: 予期しないエラー (Exception): {e}")
+            return None
+
+    async def get_user_info_from_access_token(self, access_token: str) -> Optional[Dict[str, Any]]:
+        """アクセストークンを使用してGoogle People APIからユーザー情報を取得"""
+        try:
+            import requests
+            
+            # Google People APIを使用してユーザー情報を取得
+            url = "https://www.googleapis.com/oauth2/v2/userinfo"
+            headers = {
+                'Authorization': f'Bearer {access_token}'
+            }
+            
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            user_info = response.json()
+            
+            print(f"DEBUG: Google People APIからユーザー情報を取得: {user_info}")
+            
+            # IDトークンと同じ形式に変換
+            return {
+                'sub': user_info['id'],
+                'email': user_info['email'],
+                'name': user_info.get('name', ''),
+                'picture': user_info.get('picture', ''),
+                'iss': 'accounts.google.com',
+                'aud': settings.GOOGLE_CLIENT_ID
+            }
+            
+        except Exception as e:
+            print(f"DEBUG: Google People APIエラー: {e}")
             return None
 
     def get_or_create_user_from_google(self, google_user_info: Dict[str, Any], db: Session) -> User:

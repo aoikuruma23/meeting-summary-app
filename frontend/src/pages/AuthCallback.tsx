@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 import './AuthCallback.css';
 
 const AuthCallback: React.FC = () => {
@@ -11,68 +12,70 @@ const AuthCallback: React.FC = () => {
   const { login } = useAuth();
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const handleAuthCallback = async () => {
       try {
-        const urlParams = new URLSearchParams(location.search);
-        const hashParams = new URLSearchParams(location.hash.substring(1));
+        console.log('DEBUG: 認証コールバック開始');
+        console.log('DEBUG: 現在のURL:', window.location.href);
+        console.log('DEBUG: URL hash:', window.location.hash);
         
-        // Google OAuthの場合（tokenがhashに含まれる）
-        const token = hashParams.get('access_token');
-        const state = urlParams.get('state');
-        
-        if (token) {
-          // Google OAuth
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/auth/google`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token }),
-          });
+        // URLパラメータからトークンを取得
+        const params = new URLSearchParams(location.hash.substring(1));
+        const idToken = params.get('id_token');
+        const accessToken = params.get('access_token');
+        const error = params.get('error');
+        const errorDescription = params.get('error_description');
 
-          const data = await response.json();
+        console.log('DEBUG: パラメータ解析結果:', {
+          idToken: idToken ? `${idToken.substring(0, 20)}...` : null,
+          accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : null,
+          error,
+          errorDescription
+        });
 
-          if (response.ok) {
-            await login(data.data.access_token, data.data.user);
-            navigate('/');
-          } else {
-            setError(data.detail || 'Googleログインに失敗しました');
-          }
-        } else if (state === 'line') {
-          // LINE OAuthの場合（codeがqueryに含まれる）
-          const code = urlParams.get('code');
-          
-          if (code) {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/auth/line`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ code }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-              await login(data.data.access_token, data.data.user);
-              navigate('/');
-            } else {
-              setError(data.detail || 'LINEログインに失敗しました');
-            }
-          } else {
-            setError('認証コードが見つかりません');
-          }
-        } else {
-          setError('無効な認証リクエストです');
+        if (error) {
+          console.error('DEBUG: Google OAuthエラー:', error, errorDescription);
+          setError(`認証に失敗しました: ${errorDescription || error}`);
+          setIsLoading(false);
+          return;
         }
-      } catch (err) {
-        setError('認証処理中にエラーが発生しました');
+
+        // IDトークンまたはアクセストークンのいずれかを使用
+        const token = idToken || accessToken;
+        
+        if (!token) {
+          console.error('DEBUG: トークンが見つかりません');
+          setError('認証トークンが見つかりません。再度ログインしてください。');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('DEBUG: Google認証APIを呼び出し');
+        
+        // Google認証APIを呼び出し
+        const response = await authService.googleAuth(token);
+        
+        console.log('DEBUG: 認証APIレスポンス:', response);
+        
+        if (response.success) {
+          await login(response.data.access_token, response.data.user);
+          navigate('/');
+        } else {
+          setError('認証に失敗しました。再度ログインしてください。');
+        }
+      } catch (err: any) {
+        console.error('DEBUG: 認証コールバックエラー:', err);
+        console.error('DEBUG: エラー詳細:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
+        setError(err.message || '認証に失敗しました。再度ログインしてください。');
       } finally {
         setIsLoading(false);
       }
     };
 
-    handleCallback();
+    handleAuthCallback();
   }, [location, login, navigate]);
 
   if (isLoading) {
@@ -80,8 +83,8 @@ const AuthCallback: React.FC = () => {
       <div className="auth-callback-container">
         <div className="auth-callback-card">
           <div className="loading-spinner"></div>
-          <h2>認証処理中...</h2>
-          <p>しばらくお待ちください</p>
+          <h2>認証中...</h2>
+          <p>Googleアカウントでログインしています</p>
         </div>
       </div>
     );
@@ -91,9 +94,13 @@ const AuthCallback: React.FC = () => {
     return (
       <div className="auth-callback-container">
         <div className="auth-callback-card">
+          <div className="error-icon">❌</div>
           <h2>認証エラー</h2>
-          <p className="error-message">{error}</p>
-          <button onClick={() => navigate('/login')} className="back-button">
+          <p>{error}</p>
+          <button 
+            onClick={() => navigate('/login')}
+            className="back-to-login-button"
+          >
             ログインページに戻る
           </button>
         </div>
@@ -101,7 +108,15 @@ const AuthCallback: React.FC = () => {
     );
   }
 
-  return null;
+  return (
+    <div className="auth-callback-container">
+      <div className="auth-callback-card">
+        <div className="success-icon">✅</div>
+        <h2>認証成功</h2>
+        <p>ログインに成功しました。リダイレクト中...</p>
+      </div>
+    </div>
+  );
 };
 
 export default AuthCallback; 

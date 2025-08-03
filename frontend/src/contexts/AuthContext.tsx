@@ -45,8 +45,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(userData)
         } catch (error) {
           console.error('認証エラー:', error)
+          // トークンが無効な場合は削除
           localStorage.removeItem('token')
           setToken(null)
+          setUser(null)
         }
       }
       setIsLoading(false)

@@ -89,6 +89,13 @@
   box-shadow: none;
 }
 
+.login-note {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.5rem 0 1rem 0;
+  font-style: italic;
+}
+
 .icon {
   font-size: 1.2rem;
 }

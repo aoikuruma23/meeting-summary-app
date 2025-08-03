@@ -4,39 +4,40 @@
   align-items: center;
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  padding: 2rem;
 }
 
 .auth-callback-card {
   background: white;
-  border-radius: 12px;
-  padding: 40px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  text-align: center;
-  max-width: 400px;
+  padding: 3rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   width: 100%;
+  max-width: 500px;
+  text-align: center;
 }
 
 .auth-callback-card h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
   color: #333;
-  margin-bottom: 20px;
-  font-size: 24px;
 }
 
 .auth-callback-card p {
+  font-size: 1.1rem;
   color: #666;
-  margin-bottom: 20px;
-  line-height: 1.5;
+  margin-bottom: 2rem;
+  line-height: 1.6;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #667eea;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
+  margin: 0 auto 2rem;
 }
 
 @keyframes spin {
@@ -44,26 +45,45 @@
   100% { transform: rotate(360deg); }
 }
 
-.error-message {
-  color: #e74c3c;
-  background: #fdf2f2;
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px solid #fecaca;
-  margin-bottom: 20px;
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
 }
 
-.back-button {
-  background: #667eea;
+.success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.back-to-login-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.back-button:hover {
-  background: #5a6fd8;
+.back-to-login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .auth-callback-container {
+    padding: 1rem;
+  }
+  
+  .auth-callback-card {
+    padding: 2rem;
+  }
+  
+  .auth-callback-card h2 {
+    font-size: 1.5rem;
+  }
 } 
