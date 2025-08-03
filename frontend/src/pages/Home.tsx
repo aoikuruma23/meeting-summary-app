@@ -1,10 +1,44 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { authService } from '../services/authService'
 import './Home.css'
 
 const Home: React.FC = () => {
-  const { user } = useAuth()
+  const { user, login } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // Google認証のコールバック処理
+    const handleGoogleAuth = async () => {
+      try {
+        // URLハッシュからIDトークンを取得
+        const hash = window.location.hash.substring(1)
+        if (hash && hash.includes('id_token=')) {
+          const params = new URLSearchParams(hash)
+          const idToken = params.get('id_token')
+          
+          if (idToken) {
+            console.log('DEBUG: Google認証トークンを検出')
+            
+            // Google認証APIを呼び出し
+            const response = await authService.googleAuth(idToken)
+            
+            if (response.success && response.data) {
+              await login(response.data.access_token, response.data.user)
+              // ハッシュをクリアしてリダイレクト
+              window.location.hash = ''
+              navigate('/')
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Google認証エラー:', error)
+      }
+    }
+
+    handleGoogleAuth()
+  }, [login, navigate])
 
   if (!user) {
     return (

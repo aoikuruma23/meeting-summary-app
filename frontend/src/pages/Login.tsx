@@ -63,7 +63,7 @@ const Login: React.FC = () => {
       }
 
       // Google OAuth2.0の実装 - IDトークンを取得
-      const redirectUri = `${window.location.origin}/auth/callback`;
+      const redirectUri = `${window.location.origin}`;
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid email profile&nonce=${Date.now()}`;
       window.location.href = googleAuthUrl;
     } catch (err) {
