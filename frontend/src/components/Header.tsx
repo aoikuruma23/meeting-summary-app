@@ -30,7 +30,7 @@ const Header: React.FC = () => {
               <Link to="/help" className="nav-link">ヘルプ</Link>
               <div className="user-info">
                 <span className="user-name">{user.name}</span>
-                {user.is_premium && <span className="premium-badge">プレミアム</span>}
+                {user.is_premium === 'true' && <span className="premium-badge">プレミアム</span>}
                 <button onClick={handleLogout} className="logout-btn">ログアウト</button>
               </div>
             </>
