@@ -26,7 +26,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             print("DEBUG: payload が None")
             raise credentials_exception
             
-        user_id: int = payload.get("sub")
+        user_id: int = int(payload.get("sub"))
         print(f"DEBUG: user_id: {user_id}, 型: {type(user_id)}")
         
         if user_id is None:
