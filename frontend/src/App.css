@@ -1,5 +1,4 @@
 .App {
-  text-align: center;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -8,9 +7,8 @@
 .main-content {
   flex: 1;
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: calc(100vh - 80px - 200px); /* ヘッダーとフッターの高さを考慮 */
 }
 
 /* カードスタイル */
@@ -137,7 +135,8 @@
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
   .main-content {
-    padding: 16px;
+    padding: 10px;
+    min-height: calc(100vh - 60px - 150px);
   }
   
   .card {
