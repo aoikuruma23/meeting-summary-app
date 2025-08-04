@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-ap
 
 // 認証トークンを取得する関数
 const getAuthToken = (): string | null => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('access_token');
 };
 
 // APIクライアントの設定

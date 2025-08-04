@@ -10,7 +10,7 @@ const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -112,20 +112,17 @@ class RecordingService {
   }
 
   async getSummary(meetingId: number): Promise<any> {
-    const response = await apiClient.get(`/recording/summary/${meetingId}`)
+    const response = await apiClient.get(`/summary/${meetingId}`)
     return response.data
   }
 
   async exportSummary(meetingId: number, format: 'pdf' | 'docx'): Promise<any> {
-    const response = await apiClient.post('/recording/export', {
-      meeting_id: meetingId,
-      format: format
-    })
+    const response = await apiClient.post(`/summary/export/${meetingId}`, { format })
     return response.data
   }
 
   async downloadExport(filename: string): Promise<Blob> {
-    const response = await apiClient.get(`/recording/download-export/${filename}`, {
+    const response = await apiClient.get(`/summary/download/${filename}`, {
       responseType: 'blob'
     })
     return response.data
