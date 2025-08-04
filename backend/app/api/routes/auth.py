@@ -51,15 +51,26 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
         user = db.query(User).filter(User.email == email).first()
         
         if not user:
+            # 新規ユーザーを作成
             user = User(
                 email=email,
                 name=name,
                 profile_picture=picture,
-                auth_provider="google"
+                auth_provider="google",
+                google_id=google_data.get("sub"), # Google IDを保存
+                is_premium="true"  # Googleユーザーもプレミアムとして設定
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+            print(f"DEBUG: Googleユーザー作成完了 - ID: {user.id}")
+        else:
+            print(f"DEBUG: 既存Googleユーザー取得 - ID: {user.id}")
+            # 既存ユーザーの場合もプレミアム状態を確認・更新
+            if user.is_premium != "true":
+                user.is_premium = "true"
+                db.commit()
+                print(f"DEBUG: 既存Googleユーザーのプレミアム状態を更新")
         
         # アクセストークンを生成
         access_token = create_access_token(data={"sub": user.email})

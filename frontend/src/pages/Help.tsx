@@ -1,121 +1,56 @@
-import React from 'react';
-import './Help.css';
+import React from 'react'
+import { Link } from 'react-router-dom'
+import './Help.css'
 
 const Help: React.FC = () => {
   return (
     <div className="help-container">
+      <Link to="/" className="back-button">
+        ← 戻る
+      </Link>
+      
       <div className="help-content">
-        <h1>📚 ヘルプ・サポート</h1>
+        <h1>ヘルプ</h1>
         
-        <section className="help-section">
-          <h2>🎯 基本的な使い方</h2>
-          <div className="help-item">
-            <h3>1. 録音の開始</h3>
-            <ol>
-              <li>ホーム画面で「録音開始」ボタンをクリック</li>
-              <li>会議のタイトルと参加者を入力</li>
-              <li>マイクの許可を承認</li>
-              <li>「録音開始」で録音を開始</li>
-            </ol>
-          </div>
+        <div className="help-section">
+          <h2>アプリの使い方</h2>
+          <h3>1. 録音開始</h3>
+          <p>ホーム画面の「録音開始」ボタンをクリックして、会議の録音を開始します。</p>
           
-          <div className="help-item">
-            <h3>2. 録音の停止</h3>
-            <ol>
-              <li>録音中に「録音停止」ボタンをクリック</li>
-              <li>自動的に要約が生成されます</li>
-              <li>処理完了までお待ちください</li>
-            </ol>
-          </div>
+          <h3>2. 録音中</h3>
+          <p>録音中は音声がリアルタイムで文字起こしされ、画面に表示されます。</p>
           
-          <div className="help-item">
-            <h3>3. 要約の確認</h3>
-            <ol>
-              <li>「履歴」ページで録音一覧を確認</li>
-              <li>録音をクリックして要約を表示</li>
-              <li>プレミアム会員はPDF/Wordでダウンロード可能</li>
-            </ol>
-          </div>
-        </section>
-
-        <section className="help-section">
-          <h2>💎 プレミアム機能</h2>
-          <div className="help-item">
-            <h3>プレミアム会員の特典</h3>
-            <ul>
-              <li>✅ 録音時間：2時間（無料版は30分）</li>
-              <li>✅ PDF出力機能</li>
-              <li>✅ Word出力機能</li>
-              <li>✅ 無制限の使用回数</li>
-              <li>✅ 優先サポート</li>
-            </ul>
-          </div>
+          <h3>3. 録音停止</h3>
+          <p>録音を停止すると、自動的に要約が生成されます。</p>
           
-          <div className="help-item">
-            <h3>プレミアムへのアップグレード</h3>
-            <ol>
-              <li>「設定」ページに移動</li>
-              <li>「プレミアムプランにアップグレード」をクリック</li>
-              <li>Stripeで安全に決済</li>
-              <li>即座にプレミアム機能が利用可能</li>
-            </ol>
-          </div>
-        </section>
-
-        <section className="help-section">
-          <h2>🔧 トラブルシューティング</h2>
-          <div className="help-item">
-            <h3>よくある問題と解決方法</h3>
-            
-            <div className="troubleshoot-item">
-              <h4>Q: マイクが認識されません</h4>
-              <p>A: ブラウザの設定でマイクの許可を確認してください。Chrome、Edge、Safariを推奨します。</p>
-            </div>
-            
-            <div className="troubleshoot-item">
-              <h4>Q: 録音が途中で止まります</h4>
-              <p>A: 無料版は30分まで、プレミアム版は2時間まで録音可能です。長時間の録音にはプレミアム版をご利用ください。</p>
-            </div>
-            
-            <div className="troubleshoot-item">
-              <h4>Q: 要約が生成されません</h4>
-              <p>A: 音声が小さすぎる場合があります。マイクに近づいて話してください。また、インターネット接続を確認してください。</p>
-            </div>
-            
-            <div className="troubleshoot-item">
-              <h4>Q: PDF/Word出力ができません</h4>
-              <p>A: プレミアム会員のみ利用可能です。「設定」ページからプレミアムにアップグレードしてください。</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="help-section">
-          <h2>📞 サポート</h2>
-          <div className="help-item">
-            <h3>お問い合わせ</h3>
-            <p>問題が解決しない場合は、以下の方法でサポートにお問い合わせください：</p>
-            <ul>
-              <li>📧 メール: jibunkaikakulab@gmail.com</li>
-              <li>💬 LINE: <a href="https://lin.ee/HQWdapv" target="_blank" rel="noopener noreferrer">@meeting-summary-app</a></li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="help-section">
-          <h2>🔒 プライバシー・セキュリティ</h2>
-          <div className="help-item">
-            <h3>データの取り扱い</h3>
-            <ul>
-              <li>✅ 音声データは暗号化して保存</li>
-              <li>✅ 要約データは安全に管理</li>
-              <li>✅ 決済情報はStripeで安全に処理</li>
-              <li>✅ 個人情報は適切に保護</li>
-            </ul>
-          </div>
-        </section>
+          <h3>4. 結果確認</h3>
+          <p>生成された要約は履歴ページで確認できます。</p>
+        </div>
+        
+        <div className="help-section">
+          <h2>よくある質問</h2>
+          <h3>Q: 録音時間の制限はありますか？</h3>
+          <p>A: 無料プランでは30分、プレミアムプランでは2時間まで録音できます。</p>
+          
+          <h3>Q: 音声の品質は重要ですか？</h3>
+          <p>A: より良い音質の方が文字起こしの精度が向上します。静かな環境での録音をお勧めします。</p>
+          
+          <h3>Q: 要約の精度はどの程度ですか？</h3>
+          <p>A: AI技術を使用して高精度な要約を提供していますが、音声の品質や話者の明瞭さに依存します。</p>
+        </div>
+        
+        <div className="help-section">
+          <h2>サポート</h2>
+          <p>お困りの際は、以下の方法でサポートを受けることができます：</p>
+          <ul>
+            <li>このヘルプページの確認</li>
+            <li>利用規約の確認</li>
+            <li>プライバシーポリシーの確認</li>
+          </ul>
+        </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Help; 
+export default Help 
