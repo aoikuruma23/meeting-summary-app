@@ -1,81 +1,47 @@
-from fastapi import FastAPI, HTTPException, Request
+import os
+import sys
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-import uvicorn
-from app.core.config import settings
 from app.api.routes import auth, recording, summary, billing
 from app.core.database import engine, Base
-from app.middleware.rate_limit import rate_limit_logging_middleware
+from app.middleware.rate_limit import RateLimitMiddleware
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # アプリケーション起動時の処理
-    Base.metadata.create_all(bind=engine)
-    yield
-    # アプリケーション終了時の処理
+# データベーステーブルを作成
+Base.metadata.create_all(bind=engine)
 
-app = FastAPI(
-    title="議事録要約Webアプリ",
-    description="会議音声を自動で文字起こし・要約するWebアプリケーション",
-    version="1.0.0",
-    lifespan=lifespan
-)
+# マイグレーションを実行
+try:
+    from run_migration import run_migration
+    print("データベースマイグレーションを実行中...")
+    run_migration()
+    print("マイグレーション完了")
+except Exception as e:
+    print(f"マイグレーションエラー（無視可能）: {e}")
 
-# レート制限ログミドルウェアを追加
-@app.middleware("http")
-async def rate_limit_logging(request: Request, call_next):
-    return await rate_limit_logging_middleware(request, call_next)
+app = FastAPI(title="Meeting Summary API", version="1.0.0")
 
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:5173",
-        "https://meeting-summary-app.vercel.app",  # Vercelフロントエンド
-        "https://meeting-summary-app-frontend.vercel.app",  # 代替URL
-        "https://meeting-summary-app.onrender.com",  # Renderフロントエンド
-        "https://meeting-summary-app-frontend.onrender.com"  # Renderフロントエンド代替
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ルーターの登録
-app.include_router(auth.router, prefix="/api/auth", tags=["認証"])
-app.include_router(recording.router, prefix="/api/recording", tags=["録音"])
-app.include_router(summary.router, prefix="/api/summary", tags=["要約"])
-app.include_router(billing.router, prefix="/api/billing", tags=["課金"])
+# レート制限ミドルウェアを追加
+app.add_middleware(RateLimitMiddleware)
+
+# APIルーターを追加
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(recording.router, prefix="/api/recording", tags=["recording"])
+app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
+app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 
 @app.get("/")
 async def root():
-    return {"message": "議事録要約Webアプリ API"}
+    return {"message": "Meeting Summary API is running!"}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
-
-@app.get("/rate-limit-stats")
-async def get_rate_limit_stats():
-    """レート制限統計を取得"""
-    from app.middleware.rate_limit import get_rate_limit_stats
-    return get_rate_limit_stats()
-
-@app.post("/rate-limit-stats/reset")
-async def reset_rate_limit_stats():
-    """レート制限統計をリセット"""
-    from app.middleware.rate_limit import reset_rate_limit_stats
-    reset_rate_limit_stats()
-    return {"message": "レート制限統計をリセットしました"}
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=False  # 本番環境ではreloadを無効化
-    ) 
+    return {"status": "healthy", "message": "API is running normally"} 
