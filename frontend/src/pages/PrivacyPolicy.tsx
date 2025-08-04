@@ -1,8 +1,13 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './PrivacyPolicy.css'
 
 const PrivacyPolicy: React.FC = () => {
+  useEffect(() => {
+    // ページトップにスクロール
+    window.scrollTo(0, 0)
+  }, [])
+
   return (
     <div className="privacy-container">
       <Link to="/" className="back-button">

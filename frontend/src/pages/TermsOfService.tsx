@@ -1,8 +1,13 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './TermsOfService.css'
 
 const TermsOfService: React.FC = () => {
+  useEffect(() => {
+    // ページトップにスクロール
+    window.scrollTo(0, 0)
+  }, [])
+
   return (
     <div className="terms-container">
       <Link to="/" className="back-button">

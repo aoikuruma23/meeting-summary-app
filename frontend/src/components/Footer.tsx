@@ -1,8 +1,34 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import './Footer.css';
+import React from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import './Footer.css'
 
 const Footer: React.FC = () => {
+  const navigate = useNavigate()
+
+  const scrollToTop = () => {
+    window.scrollTo(0, 0)
+  }
+
+  const handleHomeClick = () => {
+    navigate('/')
+    scrollToTop()
+  }
+
+  const handleHelpClick = () => {
+    navigate('/help')
+    scrollToTop()
+  }
+
+  const handlePrivacyClick = () => {
+    navigate('/privacy')
+    scrollToTop()
+  }
+
+  const handleTermsClick = () => {
+    navigate('/terms')
+    scrollToTop()
+  }
+
   return (
     <footer className="footer">
       <div className="footer-content">
@@ -14,10 +40,10 @@ const Footer: React.FC = () => {
         <div className="footer-section">
           <h4>リンク</h4>
           <ul>
-            <li><Link to="/">ホーム</Link></li>
-            <li><Link to="/help">ヘルプ</Link></li>
-            <li><Link to="/privacy">プライバシーポリシー</Link></li>
-            <li><Link to="/terms">利用規約</Link></li>
+            <li><button onClick={handleHomeClick} className="footer-link">ホーム</button></li>
+            <li><button onClick={handleHelpClick} className="footer-link">ヘルプ</button></li>
+            <li><button onClick={handlePrivacyClick} className="footer-link">プライバシーポリシー</button></li>
+            <li><button onClick={handleTermsClick} className="footer-link">利用規約</button></li>
           </ul>
         </div>
         
@@ -31,7 +57,7 @@ const Footer: React.FC = () => {
         <p>&copy; 2025 議事録要約Webアプリ. All rights reserved.</p>
       </div>
     </footer>
-  );
-};
+  )
+}
 
-export default Footer; 
+export default Footer 
