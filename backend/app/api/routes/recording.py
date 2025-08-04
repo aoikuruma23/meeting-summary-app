@@ -12,6 +12,7 @@ from app.models.meeting import Meeting, AudioChunk
 from app.services.auth_service import AuthService
 from app.services.recording_service import RecordingService
 from app.services.export_service import ExportService
+from app.middleware.auth import get_current_user
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -48,29 +49,19 @@ class ExportRequest(BaseModel):
 @router.post("/start", response_model=RecordingResponse)
 async def start_recording(
     request: StartRecordingRequest,
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """録音開始"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
         # プレミアム権限チェック
-        is_premium = user.is_premium == "true"
-        print(f"DEBUG: プレミアム状態チェック - user_id: {user.id}, is_premium: {user.is_premium}, type: {type(user.is_premium)}")
+        is_premium = current_user.is_premium == "true"
+        print(f"DEBUG: プレミアム状態チェック - user_id: {current_user.id}, is_premium: {current_user.is_premium}, type: {type(current_user.is_premium)}")
         print(f"DEBUG: プレミアム判定結果: {is_premium}")
         
         # 無料期間チェック
-        if not auth_service.is_trial_valid(user):
+        auth_service = AuthService()
+        if not auth_service.is_trial_valid(current_user):
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail="無料期間が終了しました。有料プランにアップグレードしてください。"
@@ -82,7 +73,7 @@ async def start_recording(
         
         # 議事録作成
         meeting = Meeting(
-            user_id=user.id,
+            user_id=current_user.id,
             title=request.title,
             status="recording",
             max_duration=max_duration
@@ -103,16 +94,19 @@ async def start_recording(
                     created_at=meeting.created_at,
                     whisper_tokens=meeting.whisper_tokens,
                     gpt_tokens=meeting.gpt_tokens
-                ).dict()
+                )
             }
         )
-    
+        
     except HTTPException:
         raise
     except Exception as e:
+        print(f"録音開始エラー: {str(e)}")
+        import traceback
+        print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"録音開始に失敗しました: {str(e)}"
+            detail="録音開始に失敗しました"
         )
 
 @router.post("/chunk", response_model=RecordingResponse)
@@ -120,7 +114,7 @@ async def upload_chunk(
     meeting_id: int = Form(...),
     chunk_number: int = Form(...),
     audio_file: UploadFile = File(...),
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """音声チャンクのアップロード"""
@@ -151,20 +145,16 @@ async def upload_chunk(
         # ファイルポインタを先頭に戻す
         await audio_file.seek(0)
         
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        print(f"DEBUG: ユーザー認証 - email: {user_email}")
+        print(f"DEBUG: ユーザー認証 - user_id: {current_user.id}")
         
         # 議事録の確認
         meeting = db.query(Meeting).filter(
             Meeting.id == meeting_id,
-            Meeting.user_id == user.id
+            Meeting.user_id == current_user.id
         ).first()
         
         if not meeting:
-            print(f"DEBUG: 議事録が見つかりません - meeting_id: {meeting_id}, user_id: {user.id}")
+            print(f"DEBUG: 議事録が見つかりません - meeting_id: {meeting_id}, user_id: {current_user.id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="議事録が見つかりません"
@@ -224,17 +214,16 @@ async def upload_chunk(
                 "meeting_id": meeting_id
             }
         )
-    
+        
     except HTTPException:
-        print("DEBUG: HTTPException発生")
         raise
     except Exception as e:
-        print(f"DEBUG: 予期しないエラー - {str(e)}")
+        print(f"チャンクアップロードエラー: {str(e)}")
         import traceback
-        print(f"DEBUG: 詳細エラー: {traceback.format_exc()}")
+        print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"チャンクアップロードに失敗しました: {str(e)}"
+            detail="チャンクアップロードに失敗しました"
         )
 
 @router.post("/end", response_model=RecordingResponse)
