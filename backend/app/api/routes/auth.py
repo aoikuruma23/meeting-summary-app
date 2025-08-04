@@ -88,6 +88,10 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
 async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
     """LINE OAuth認証"""
     try:
+        print(f"DEBUG: LINE認証開始 - コード: {request.code[:10]}...")
+        print(f"DEBUG: LINE設定 - Channel ID: {settings.LINE_CHANNEL_ID}")
+        print(f"DEBUG: LINE設定 - Redirect URI: {settings.LINE_REDIRECT_URI}")
+        
         # LINEアクセストークンを取得
         token_response = requests.post(
             "https://api.line.me/oauth2/v2.1/token",
@@ -100,6 +104,9 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             }
         )
         
+        print(f"DEBUG: LINE token response status: {token_response.status_code}")
+        print(f"DEBUG: LINE token response: {token_response.text}")
+        
         if token_response.status_code != 200:
             print(f"LINE token error: {token_response.text}")
             raise HTTPException(status_code=400, detail="LINE認証に失敗しました")
@@ -110,11 +117,16 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         if not access_token:
             raise HTTPException(status_code=400, detail="LINE access token not found")
         
+        print(f"DEBUG: LINE access token取得成功")
+        
         # LINEプロフィールを取得
         profile_response = requests.get(
             "https://api.line.me/v2/profile",
             headers={"Authorization": f"Bearer {access_token}"}
         )
+        
+        print(f"DEBUG: LINE profile response status: {profile_response.status_code}")
+        print(f"DEBUG: LINE profile response: {profile_response.text}")
         
         if profile_response.status_code != 200:
             raise HTTPException(status_code=400, detail="LINE profile取得に失敗しました")
@@ -123,6 +135,8 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         line_user_id = profile_data.get("userId")
         name = profile_data.get("displayName", "")
         picture = profile_data.get("pictureUrl", "")
+        
+        print(f"DEBUG: LINE profile data - userId: {line_user_id}, name: {name}")
         
         if not line_user_id:
             raise HTTPException(status_code=400, detail="LINE user ID not found")
@@ -134,6 +148,8 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             # LINEユーザーIDをメールアドレスとして使用（一意性のため）
             email = f"{line_user_id}@line.user"
             
+            print(f"DEBUG: 新規LINEユーザー作成 - email: {email}, name: {name}")
+            
             user = User(
                 email=email,
                 name=name,
@@ -144,9 +160,14 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             db.add(user)
             db.commit()
             db.refresh(user)
+            print(f"DEBUG: LINEユーザー作成完了 - ID: {user.id}")
+        else:
+            print(f"DEBUG: 既存LINEユーザー取得 - ID: {user.id}")
         
         # アクセストークンを生成
         access_token = create_access_token(data={"sub": user.email})
+        
+        print(f"DEBUG: LINE認証成功 - ユーザー: {user.email}")
         
         return AuthResponse(
             success=True,
@@ -166,6 +187,8 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         
     except Exception as e:
         print(f"LINE認証エラー: {str(e)}")
+        import traceback
+        print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="LINE認証に失敗しました")
 
 @router.get("/me", response_model=AuthResponse)
