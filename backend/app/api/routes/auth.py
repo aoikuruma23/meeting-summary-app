@@ -86,7 +86,7 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
                 print(f"DEBUG: 既存Googleユーザーのプレミアム状態を更新")
         
         # アクセストークンを生成
-        access_token = create_access_token(data={"sub": user.email})
+        access_token = create_access_token(data={"sub": user.id})
         
         return AuthResponse(
             success=True,
@@ -195,7 +195,7 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
                 print(f"DEBUG: 既存LINEユーザーのプレミアム状態を更新")
         
         # アクセストークンを生成
-        access_token = create_access_token(data={"sub": user.email})
+        access_token = create_access_token(data={"sub": user.id})
         
         print(f"DEBUG: LINE認証成功 - ユーザー: {user.email}")
         
@@ -243,7 +243,7 @@ async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db))
         print(f"DEBUG: メールログイン成功 - email: {user.email}")
         
         # アクセストークンを生成
-        access_token = create_access_token(data={"sub": user.email})
+        access_token = create_access_token(data={"sub": user.id})
         
         return AuthResponse(
             success=True,
@@ -296,7 +296,7 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         print(f"DEBUG: メール登録成功 - ID: {user.id}")
         
         # アクセストークンを生成
-        access_token = create_access_token(data={"sub": user.email})
+        access_token = create_access_token(data={"sub": user.id})
         
         return AuthResponse(
             success=True,

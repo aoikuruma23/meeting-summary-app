@@ -260,7 +260,7 @@ const Recording: React.FC = () => {
                   <div className="info-icon">⏱️</div>
                   <div className="info-content">
                     <h3>録音時間</h3>
-                    <p>{user?.is_premium ? '最大2時間' : '最大30分'}</p>
+                    <p>{user?.is_premium === "true" ? '最大2時間' : '最大30分'}</p>
                   </div>
                 </div>
                 
@@ -276,7 +276,7 @@ const Recording: React.FC = () => {
                   <div className="info-icon">📁</div>
                   <div className="info-content">
                     <h3>保存先</h3>
-                    <p>履歴ページで確認・ダウンロード</p>
+                    <p>{user?.is_premium === "true" ? '履歴ページで確認・ダウンロード' : '履歴ページで確認'}</p>
                   </div>
                 </div>
               </div>

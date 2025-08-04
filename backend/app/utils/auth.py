@@ -56,8 +56,8 @@ def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        email: str = payload.get("sub")
-        if email is None:
+        user_id: int = payload.get("sub")
+        if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="トークンにユーザー情報が含まれていません",
@@ -65,7 +65,7 @@ def get_current_user(
             )
         
         # ダミーユーザーの場合
-        if email == "dummy@example.com":
+        if user_id == 1:
             current_time = datetime.utcnow()
             user = User(
                 id=1,
@@ -79,7 +79,7 @@ def get_current_user(
             return user
         
         # データベースからユーザーを取得
-        user = db.query(User).filter(User.email == email).first()
+        user = db.query(User).filter(User.id == user_id).first()
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
