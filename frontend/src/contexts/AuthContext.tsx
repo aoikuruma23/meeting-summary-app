@@ -5,15 +5,16 @@ interface User {
   id: number
   email: string
   name: string
-  is_premium: string  // booleanからstringに変更
-  usage_count: number
-  trial_start_date: string
+  profile_picture?: string
+  is_premium: string
+  usage_count?: number
+  trial_start_date?: string
 }
 
 interface AuthContextType {
   user: User | null
   token: string | null
-  login: (token: string, userData?: any) => Promise<void>
+  login: (token: string, userData: User) => Promise<void>
   logout: () => void
   isLoading: boolean
 }
@@ -34,19 +35,21 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
+  const [token, setToken] = useState<string | null>(localStorage.getItem('access_token'))
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const initializeAuth = async () => {
       if (token) {
         try {
-          const userData = await authService.getCurrentUser(token)
-          setUser(userData)
+          const response = await authService.getCurrentUser()
+          if (response.success && response.data?.user) {
+            setUser(response.data.user)
+          }
         } catch (error) {
           console.error('認証エラー:', error)
           // トークンが無効な場合は削除
-          localStorage.removeItem('token')
+          localStorage.removeItem('access_token')
           setToken(null)
           setUser(null)
         }
@@ -57,28 +60,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth()
   }, [token])
 
-  const login = async (newToken: string, userData?: any) => {
+  const login = async (newToken: string, userData: User) => {
     setToken(newToken)
-    localStorage.setItem('token', newToken)
-    
-    // ユーザー情報が提供された場合は設定
-    if (userData) {
-      setUser(userData)
-    } else {
-      // ユーザー情報が提供されていない場合は取得
-      try {
-        const userData = await authService.getCurrentUser(newToken)
-        setUser(userData)
-      } catch (error) {
-        console.error('ユーザー情報取得エラー:', error)
-      }
-    }
+    localStorage.setItem('access_token', newToken)
+    setUser(userData)
   }
 
   const logout = () => {
     setUser(null)
     setToken(null)
-    localStorage.removeItem('token')
+    localStorage.removeItem('access_token')
+    authService.logout()
   }
 
   const value: AuthContextType = {
