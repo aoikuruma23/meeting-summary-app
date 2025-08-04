@@ -155,7 +155,8 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
                 name=name,
                 profile_picture=picture,
                 auth_provider="line",
-                line_user_id=line_user_id
+                line_user_id=line_user_id,
+                is_premium="true"  # LINEユーザーはプレミアムとして設定
             )
             db.add(user)
             db.commit()
@@ -163,6 +164,11 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             print(f"DEBUG: LINEユーザー作成完了 - ID: {user.id}")
         else:
             print(f"DEBUG: 既存LINEユーザー取得 - ID: {user.id}")
+            # 既存ユーザーの場合もプレミアム状態を確認・更新
+            if user.is_premium != "true":
+                user.is_premium = "true"
+                db.commit()
+                print(f"DEBUG: 既存LINEユーザーのプレミアム状態を更新")
         
         # アクセストークンを生成
         access_token = create_access_token(data={"sub": user.email})
