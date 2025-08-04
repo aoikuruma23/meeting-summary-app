@@ -12,7 +12,6 @@ from app.models.meeting import Meeting, AudioChunk
 from app.services.auth_service import AuthService
 from app.services.recording_service import RecordingService
 from app.services.export_service import ExportService
-from app.middleware.rate_limit import create_rate_limit_decorator
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
