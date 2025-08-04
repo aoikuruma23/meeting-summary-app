@@ -2,6 +2,9 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:8000/api'
 
+console.log('DEBUG: API_BASE_URL:', API_BASE_URL);
+console.log('DEBUG: VITE_API_URL:', import.meta.env.VITE_API_URL);
+
 // axiosのインスタンスを作成
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -43,6 +46,7 @@ class AuthService {
     try {
       console.log('DEBUG: Google認証API呼び出し開始');
       console.log('DEBUG: トークン長さ:', token.length);
+      console.log('DEBUG: API URL:', `${API_BASE_URL}/auth/google`);
       
       const response = await apiClient.post('/auth/google', { token })
       console.log('DEBUG: Google認証APIレスポンス成功:', response.data);
@@ -52,7 +56,8 @@ class AuthService {
       console.error('DEBUG: エラー詳細:', {
         status: error.response?.status,
         data: error.response?.data,
-        message: error.message
+        message: error.message,
+        url: error.config?.url
       });
       
       if (error.response?.status === 503) {
