@@ -229,15 +229,13 @@ async def upload_chunk(
 @router.post("/end", response_model=RecordingResponse)
 async def end_recording(
     request: EndRecordingRequest,
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """録音終了と要約処理開始"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
+        # ユーザー認証済み
+        user = current_user
         
         # 議事録の確認
         meeting = db.query(Meeting).filter(
@@ -356,15 +354,13 @@ async def get_recording_status(
 
 @router.get("/list", response_model=RecordingResponse)
 async def get_recording_list(
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """ユーザーの録音一覧を取得"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
+        # ユーザー認証済み
+        user = current_user
         
         # ユーザーの議事録一覧を取得
         meetings = db.query(Meeting).filter(
