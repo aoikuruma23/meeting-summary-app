@@ -2,33 +2,33 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+  min-height: calc(100vh - 200px);
 }
 
-/* ウェルカムセクション */
+/* 未ログイン時のウェルカムセクション */
 .welcome-section {
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 3rem 0;
+  padding: 4rem 2rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
   border-radius: 20px;
+  color: white;
   margin-bottom: 3rem;
 }
 
 .welcome-section h1 {
-  font-size: 2.5rem;
+  font-size: 3rem;
   margin-bottom: 1rem;
-  font-weight: 700;
+  font-weight: bold;
 }
 
 .subtitle {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   margin-bottom: 1rem;
   opacity: 0.9;
 }
 
 .description {
-  font-size: 1rem;
+  font-size: 1.1rem;
   line-height: 1.6;
   margin-bottom: 2rem;
   opacity: 0.8;
@@ -36,31 +36,30 @@
 
 .cta-button {
   display: inline-block;
-  background: #ff6b6b;
-  color: white;
   padding: 1rem 2rem;
-  border-radius: 50px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
   text-decoration: none;
-  font-size: 1.1rem;
-  font-weight: 600;
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: bold;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
 }
 
 .cta-button:hover {
-  background: #ff5252;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
-/* 機能セクション */
+/* 機能紹介セクション */
 .features-section {
   margin-bottom: 3rem;
 }
 
 .features-section h2 {
   text-align: center;
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 2rem;
   color: #333;
 }
@@ -75,8 +74,8 @@
   background: white;
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
 }
 
@@ -90,7 +89,7 @@
 }
 
 .feature-card h3 {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   margin-bottom: 1rem;
   color: #333;
 }
@@ -100,19 +99,20 @@
   line-height: 1.6;
 }
 
-/* ユーザーウェルカム */
+/* ログイン後のユーザーウェルカム */
 .user-welcome {
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 2rem;
+  padding: 3rem 2rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
   border-radius: 20px;
+  color: white;
+  margin-bottom: 3rem;
 }
 
 .user-welcome h1 {
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 2rem;
+  font-weight: bold;
 }
 
 .user-stats {
@@ -130,19 +130,19 @@
 }
 
 .stat-icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
 }
 
 .stat-card h3 {
-  font-size: 1rem;
+  font-size: 1.2rem;
   margin-bottom: 0.5rem;
   opacity: 0.9;
 }
 
 .stat-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: bold;
 }
 
 /* メインアクション */
@@ -152,7 +152,7 @@
 
 .main-actions h2 {
   text-align: center;
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 2rem;
   color: #333;
 }
@@ -167,37 +167,35 @@
   display: flex;
   align-items: center;
   padding: 2rem;
+  background: white;
   border-radius: 15px;
   text-decoration: none;
-  color: white;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.main-action-button.recording {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
-}
-
-.main-action-button.history {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-}
-
-.main-action-button.settings {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
   color: #333;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .main-action-button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.main-action-button.recording {
+  border-color: #667eea;
+}
+
+.main-action-button.history {
+  border-color: #764ba2;
+}
+
+.main-action-button.settings {
+  border-color: #f093fb;
 }
 
 .action-icon {
   font-size: 2.5rem;
   margin-right: 1.5rem;
-  flex-shrink: 0;
 }
 
 .action-content {
@@ -205,41 +203,44 @@
 }
 
 .action-content h3 {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   margin-bottom: 0.5rem;
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .action-content p {
-  font-size: 0.9rem;
-  opacity: 0.9;
-  margin: 0;
+  color: #666;
+  line-height: 1.5;
 }
 
 .action-arrow {
   font-size: 1.5rem;
-  font-weight: bold;
-  opacity: 0.7;
+  color: #999;
+  transition: transform 0.3s ease;
+}
+
+.main-action-button:hover .action-arrow {
+  transform: translateX(5px);
 }
 
 /* アップグレードセクション */
 .upgrade-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
   border-radius: 20px;
-  padding: 2rem;
+  padding: 3rem;
   text-align: center;
 }
 
 .upgrade-content h2 {
-  font-size: 1.8rem;
+  font-size: 2rem;
   margin-bottom: 1rem;
+  color: #333;
 }
 
 .upgrade-content p {
   font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  opacity: 0.9;
+  margin-bottom: 2rem;
+  color: #666;
 }
 
 .upgrade-features {
@@ -254,52 +255,55 @@
 
 .upgrade-features li {
   padding: 0.5rem 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  color: #333;
 }
 
 .upgrade-button {
   display: inline-block;
-  background: #ffd700;
-  color: #333;
   padding: 1rem 2rem;
-  border-radius: 50px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
   text-decoration: none;
-  font-size: 1.1rem;
-  font-weight: 600;
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: bold;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
 }
 
 .upgrade-button:hover {
-  background: #ffed4e;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
-/* レスポンシブデザイン */
+/* レスポンシブ対応 */
 @media (max-width: 768px) {
   .home-container {
     padding: 1rem;
   }
   
-  .welcome-section h1 {
+  .welcome-section h1,
+  .user-welcome h1 {
     font-size: 2rem;
   }
   
-  .user-welcome h1 {
-    font-size: 1.5rem;
-  }
-  
+  .features-grid,
   .action-grid {
     grid-template-columns: 1fr;
   }
   
+  .user-stats {
+    grid-template-columns: 1fr;
+  }
+  
   .main-action-button {
-    padding: 1.5rem;
+    flex-direction: column;
+    text-align: center;
   }
   
   .action-icon {
-    font-size: 2rem;
-    margin-right: 1rem;
+    margin-right: 0;
+    margin-bottom: 1rem;
   }
 } 
