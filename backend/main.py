@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import auth, recording, summary, billing
 from app.core.database import engine, Base
-from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.rate_limit import rate_limit_logging_middleware
 
 # データベーステーブルを作成
 Base.metadata.create_all(bind=engine)
@@ -30,7 +30,9 @@ app.add_middleware(
 )
 
 # レート制限ミドルウェアを追加
-app.add_middleware(RateLimitMiddleware)
+@app.middleware("http")
+async def rate_limit_middleware(request, call_next):
+    return await rate_limit_logging_middleware(request, call_next)
 
 # APIルーターを追加
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
