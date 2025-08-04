@@ -4,7 +4,7 @@ import os
 
 class Settings(BaseSettings):
     # データベース設定
-    DATABASE_URL: str = "sqlite:///./meeting_summary.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
     
     # PostgreSQLの場合、URLを調整
     @property
@@ -14,17 +14,17 @@ class Settings(BaseSettings):
         return self.DATABASE_URL
     
     # JWT設定
-    SECRET_KEY: str = "your-secret-key-here"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24時間
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # OpenAI設定
     OPENAI_API_KEY: str = ""
     
     # Stripe設定
-    STRIPE_SECRET_KEY: str = ""
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
     STRIPE_PUBLISHABLE_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
     
     # 暗号化設定
     ENCRYPTION_KEY: str = "your-encryption-key-here"
@@ -39,9 +39,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
     
     # LINE OAuth設定
-    LINE_CHANNEL_ID: str = ""
-    LINE_CHANNEL_SECRET: str = ""
-    LINE_REDIRECT_URI: str = ""
+    LINE_CHANNEL_ID: str = os.getenv("LINE_CHANNEL_ID", "2007873513")
+    LINE_CHANNEL_SECRET: str = os.getenv("LINE_CHANNEL_SECRET", "47b545a350ba98551d1f6bcd5259f0a0")
+    LINE_REDIRECT_URI: str = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.onrender.com/auth/callback")
     
     # ファイル設定
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     # レート制限設定
     RATE_LIMIT_MAX_REQUESTS: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_PER_MINUTE: int = 60
     
     # ログ設定
     SECURITY_LEVEL: str = "standard"
@@ -74,6 +75,9 @@ class Settings(BaseSettings):
     
     # 機能設定
     DUMMY_LOGIN_ENABLED: str = "true"
+    
+    # Whisper設定
+    WHISPER_MODEL: str = "base"
     
     class Config:
         env_file = ".env"

@@ -78,14 +78,16 @@ const Login: React.FC = () => {
 
     try {
       // LINE OAuth設定が完了していない場合の処理
-      if (!import.meta.env.VITE_LINE_CHANNEL_ID) {
+      const lineChannelId = import.meta.env.VITE_LINE_CHANNEL_ID;
+      
+      if (!lineChannelId) {
         setError('LINEログインは現在準備中です。ダミーログインをご利用ください。');
         setIsLoading(false);
         return;
       }
 
       // LINE OAuth2.0の実装
-      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${import.meta.env.VITE_LINE_CHANNEL_ID}&redirect_uri=${window.location.origin}/auth/callback&state=line&scope=profile openid email`;
+      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${lineChannelId}&redirect_uri=${encodeURIComponent(window.location.origin)}&state=line&scope=profile openid email`;
       window.location.href = lineAuthUrl;
     } catch (err) {
       setError('LINEログインに失敗しました');
@@ -197,7 +199,7 @@ const Login: React.FC = () => {
             💬 LINEでログイン
           </button>
           <p className="login-note">
-            ※ LINEログインは現在準備中です。ダミーログインをご利用ください。
+            ※ LINEアカウントでログインできます
           </p>
           
           <button 

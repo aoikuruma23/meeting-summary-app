@@ -1,33 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+import os
+import requests
+import jwt
 from datetime import datetime, timedelta
 from typing import Optional
-import jwt
-from pydantic import BaseModel, EmailStr
-from app.core.database import get_db
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from app.core.config import settings
+from app.core.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
-from app.middleware.rate_limit import create_rate_limit_decorator
+from app.utils.auth import create_access_token, get_current_user
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# レスポンスモデル
-class AuthResponse(BaseModel):
-    success: bool
-    message: str
-    data: Optional[dict] = None
-
-class UserResponse(BaseModel):
-    id: int
-    email: str
-    name: Optional[str] = None
-    is_premium: str
-    usage_count: int
-    trial_start_date: datetime
-    created_at: Optional[datetime] = None
+security = HTTPBearer()
 
 class GoogleAuthRequest(BaseModel):
     token: str
@@ -35,151 +22,47 @@ class GoogleAuthRequest(BaseModel):
 class LineAuthRequest(BaseModel):
     code: str
 
-class UpdateUserRequest(BaseModel):
-    name: Optional[str] = None
-
-class UserStatsResponse(BaseModel):
-    trial_remaining_days: int
-    usage_remaining: int
-    total_meetings: int
-    completed_meetings: int
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-    name: str
-
-@router.post("/dummy", response_model=AuthResponse)
-@create_rate_limit_decorator("dummy")
-async def dummy_auth(db: Session = Depends(get_db)):
-    """ダミー認証（テスト用）"""
-    try:
-        current_time = datetime.utcnow()
-        
-        # ダミーユーザーの作成
-        user = User(
-            id=1,
-            email="dummy@example.com",
-            name="テストユーザー",
-            is_premium="true",  # falseからtrueに変更
-            usage_count=0,
-            trial_start_date=current_time,
-            created_at=current_time
-        )
-        
-        # JWTトークンの生成
-        auth_service = AuthService()
-        access_token = auth_service.create_access_token(data={"sub": user.email})
-        
-        return AuthResponse(
-            success=True,
-            message="ダミー認証が成功しました",
-            data={
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": UserResponse(
-                    id=user.id,
-                    email=user.email,
-                    name=user.name,
-                    is_premium=user.is_premium,
-                    usage_count=user.usage_count,
-                    trial_start_date=user.trial_start_date,
-                    created_at=user.created_at
-                ).dict()
-            }
-        )
-    
-    except Exception as e:
-        print(f"dummy_auth error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ダミー認証に失敗しました: {str(e)}"
-        )
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    data: Optional[dict] = None
 
 @router.post("/google", response_model=AuthResponse)
 async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
     """Google OAuth認証"""
     try:
-        print(f"DEBUG: Google認証開始 - トークン長さ: {len(request.token) if request.token else 0}")
+        # Google IDトークンを検証
+        google_response = requests.get(
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={request.token}"
+        )
         
-        # Google OAuth設定が未完了の場合
-        if not settings.GOOGLE_CLIENT_ID or settings.GOOGLE_CLIENT_ID in ["your-google-client-id", "test-google-client-id", "your-actual-google-client-id.apps.googleusercontent.com"]:
-            print("DEBUG: Google OAuth設定が未完了")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Google OAuth設定が完了していません。現在ダミーログインをご利用ください。"
+        if google_response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Invalid Google token")
+        
+        google_data = google_response.json()
+        email = google_data.get("email")
+        name = google_data.get("name", "")
+        picture = google_data.get("picture", "")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not found in Google token")
+        
+        # ユーザーを取得または作成
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user:
+            user = User(
+                email=email,
+                name=name,
+                profile_picture=picture,
+                auth_provider="google"
             )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
         
-        print(f"DEBUG: Google OAuth設定確認 - Client ID: {settings.GOOGLE_CLIENT_ID}")
-        
-        auth_service = AuthService()
-        
-        try:
-            user_info = await auth_service.verify_google_token(request.token)
-        except Exception as e:
-            print(f"DEBUG: Googleトークン検証でエラー: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Googleトークンの検証に失敗しました: {str(e)}"
-            )
-        
-        if not user_info:
-            print("DEBUG: Googleトークン検証に失敗")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Googleトークンの検証に失敗しました。再度ログインしてください。"
-            )
-        
-        print(f"DEBUG: Googleトークン検証成功 - ユーザー情報: {user_info}")
-        
-        # ユーザーの取得または作成
-        try:
-            user = db.query(User).filter(User.google_id == user_info["sub"]).first()
-            if not user:
-                # 同じメールアドレスのユーザーが存在するかチェック
-                existing_user = db.query(User).filter(User.email == user_info["email"]).first()
-                if existing_user:
-                    # 既存ユーザーにGoogle IDを追加
-                    existing_user.google_id = user_info["sub"]
-                    existing_user.name = user_info["name"]
-                    user = existing_user
-                    print(f"DEBUG: 既存ユーザーを更新 - ID: {user.id}, Email: {user.email}")
-                else:
-                    # 新規ユーザー作成
-                    user = User(
-                        email=user_info["email"],
-                        name=user_info["name"],
-                        google_id=user_info["sub"],
-                        is_premium="false",
-                        usage_count=0,
-                        trial_start_date=datetime.utcnow()
-                    )
-                    db.add(user)
-                    print(f"DEBUG: 新規ユーザーを作成 - Email: {user.email}")
-                
-                db.commit()
-                db.refresh(user)
-        except Exception as e:
-            print(f"DEBUG: ユーザー作成/更新でエラー: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"ユーザー情報の処理に失敗しました: {str(e)}"
-            )
-        
-        # JWTトークンの生成
-        try:
-            access_token = auth_service.create_access_token(data={"sub": user.email})
-            print(f"DEBUG: JWTトークン生成完了 - ユーザー: {user.email}")
-        except Exception as e:
-            print(f"DEBUG: JWTトークン生成でエラー: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"トークン生成に失敗しました: {str(e)}"
-            )
+        # アクセストークンを生成
+        access_token = create_access_token(data={"sub": user.email})
         
         return AuthResponse(
             success=True,
@@ -187,82 +70,83 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
             data={
                 "access_token": access_token,
                 "token_type": "bearer",
-                "user": UserResponse(
-                    id=user.id,
-                    email=user.email,
-                    name=user.name,
-                    is_premium=user.is_premium,
-                    usage_count=user.usage_count,
-                    trial_start_date=user.trial_start_date,
-                    created_at=user.created_at
-                ).dict()
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "profile_picture": user.profile_picture,
+                    "is_premium": user.is_premium
+                }
             }
         )
-    
-    except HTTPException:
-        raise
-    except ValueError as e:
-        print(f"DEBUG: Google認証エラー (ValueError): {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
+        
     except Exception as e:
-        print(f"DEBUG: Google認証エラー (Exception): {e}")
-        import traceback
-        print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"認証処理中にエラーが発生しました: {str(e)}"
-        )
+        print(f"Google認証エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail="Google認証に失敗しました")
 
 @router.post("/line", response_model=AuthResponse)
 async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
     """LINE OAuth認証"""
     try:
-        auth_service = AuthService()
-        user_info = await auth_service.verify_line_token(request.code)
+        # LINEアクセストークンを取得
+        token_response = requests.post(
+            "https://api.line.me/oauth2/v2.1/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": request.code,
+                "redirect_uri": settings.LINE_REDIRECT_URI,
+                "client_id": settings.LINE_CHANNEL_ID,
+                "client_secret": settings.LINE_CHANNEL_SECRET
+            }
+        )
         
-        # ユーザーの取得または作成
-        user = db.query(User).filter(User.line_id == user_info["userId"]).first()
+        if token_response.status_code != 200:
+            print(f"LINE token error: {token_response.text}")
+            raise HTTPException(status_code=400, detail="LINE認証に失敗しました")
+        
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+        
+        if not access_token:
+            raise HTTPException(status_code=400, detail="LINE access token not found")
+        
+        # LINEプロフィールを取得
+        profile_response = requests.get(
+            "https://api.line.me/v2/profile",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        
+        if profile_response.status_code != 200:
+            raise HTTPException(status_code=400, detail="LINE profile取得に失敗しました")
+        
+        profile_data = profile_response.json()
+        line_user_id = profile_data.get("userId")
+        name = profile_data.get("displayName", "")
+        picture = profile_data.get("pictureUrl", "")
+        
+        if not line_user_id:
+            raise HTTPException(status_code=400, detail="LINE user ID not found")
+        
+        # ユーザーを取得または作成
+        user = db.query(User).filter(User.line_user_id == line_user_id).first()
+        
         if not user:
-            # 同じメールアドレスのユーザーが存在するかチェック
-            email = user_info.get("email", "")
-            if email:
-                existing_user = db.query(User).filter(User.email == email).first()
-                if existing_user:
-                    # 既存ユーザーにLINE IDを追加
-                    existing_user.line_id = user_info["userId"]
-                    existing_user.name = user_info["displayName"]
-                    user = existing_user
-                else:
-                    # 新規ユーザー作成
-                    user = User(
-                        email=email,
-                        name=user_info["displayName"],
-                        line_id=user_info["userId"],
-                        is_premium="false",
-                        usage_count=0,
-                        trial_start_date=datetime.utcnow()
-                    )
-                    db.add(user)
-            else:
-                # メールアドレスがない場合は新規作成
-                user = User(
-                    email=f"line_{user_info['userId']}@line.user",
-                    name=user_info["displayName"],
-                    line_id=user_info["userId"],
-                    is_premium="false",
-                    usage_count=0,
-                    trial_start_date=datetime.utcnow()
-                )
-                db.add(user)
+            # LINEユーザーIDをメールアドレスとして使用（一意性のため）
+            email = f"{line_user_id}@line.user"
             
+            user = User(
+                email=email,
+                name=name,
+                profile_picture=picture,
+                auth_provider="line",
+                line_user_id=line_user_id
+            )
+            db.add(user)
             db.commit()
             db.refresh(user)
         
-        # JWTトークンの生成
-        access_token = auth_service.create_access_token(data={"sub": user.email})
+        # アクセストークンを生成
+        access_token = create_access_token(data={"sub": user.email})
         
         return AuthResponse(
             success=True,
@@ -270,343 +154,41 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             data={
                 "access_token": access_token,
                 "token_type": "bearer",
-                "user": UserResponse(
-                    id=user.id,
-                    email=user.email,
-                    name=user.name,
-                    is_premium=user.is_premium,
-                    usage_count=user.usage_count,
-                    trial_start_date=user.trial_start_date,
-                    created_at=user.created_at
-                ).dict()
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "profile_picture": user.profile_picture,
+                    "is_premium": user.is_premium
+                }
             }
         )
-    
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
+        
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"認証処理中にエラーが発生しました: {str(e)}"
-        )
-
-@router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """メールアドレスとパスワードでのログイン"""
-    try:
-        # 簡易的な認証（実際の実装ではパスワードハッシュ化が必要）
-        user = db.query(User).filter(User.email == request.email).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="メールアドレスまたはパスワードが正しくありません"
-            )
-        
-        # JWTトークンの生成
-        auth_service = AuthService()
-        access_token = auth_service.create_access_token(data={"sub": user.email})
-        
-        return AuthResponse(
-            success=True,
-            message="ログインが成功しました",
-            data={
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": UserResponse(
-                    id=user.id,
-                    email=user.email,
-                    name=user.name,
-                    is_premium=user.is_premium,
-                    usage_count=user.usage_count,
-                    trial_start_date=user.trial_start_date,
-                    created_at=user.created_at
-                ).dict()
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ログインに失敗しました: {str(e)}"
-        )
-
-@router.post("/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    """新規ユーザー登録"""
-    try:
-        # 既存ユーザーをチェック
-        existing_user = db.query(User).filter(User.email == request.email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="このメールアドレスは既に登録されています"
-            )
-        
-        # 新規ユーザーを作成
-        new_user = User(
-            email=request.email,
-            name=request.name,
-            is_premium="false",
-            usage_count=0,
-            trial_start_date=datetime.utcnow()
-        )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        
-        # JWTトークンの生成
-        auth_service = AuthService()
-        access_token = auth_service.create_access_token(data={"sub": new_user.email})
-        
-        return AuthResponse(
-            success=True,
-            message="ユーザー登録が成功しました",
-            data={
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": UserResponse(
-                    id=new_user.id,
-                    email=new_user.email,
-                    name=new_user.name,
-                    is_premium=new_user.is_premium,
-                    usage_count=new_user.usage_count,
-                    trial_start_date=new_user.trial_start_date,
-                    created_at=new_user.created_at
-                ).dict()
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ユーザー登録に失敗しました: {str(e)}"
-        )
+        print(f"LINE認証エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail="LINE認証に失敗しました")
 
 @router.get("/me", response_model=AuthResponse)
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """現在のユーザー情報を取得"""
     try:
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        
-        if not user_email:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="無効なトークンです"
-            )
-        
-        # ダミーユーザーの場合
-        if user_email == "dummy@example.com":
-            current_time = datetime.utcnow()
-            user = User(
-                id=1,
-                email="dummy@example.com",
-                name="テストユーザー",
-                is_premium="true",  # falseからtrueに変更
-                usage_count=0,
-                trial_start_date=current_time,
-                created_at=current_time
-            )
-        else:
-            # データベースからユーザーを取得
-            user = db.query(User).filter(User.email == user_email).first()
-            
-            if not user:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="ユーザーが見つかりません"
-                )
-        
         return AuthResponse(
             success=True,
             message="ユーザー情報を取得しました",
             data={
-                "user": UserResponse(
-                    id=user.id,
-                    email=user.email,
-                    name=user.name,
-                    is_premium=user.is_premium,
-                    usage_count=user.usage_count,
-                    trial_start_date=user.trial_start_date,
-                    created_at=user.created_at
-                ).dict()
+                "user": {
+                    "id": current_user.id,
+                    "email": current_user.email,
+                    "name": current_user.name,
+                    "profile_picture": current_user.profile_picture,
+                    "is_premium": current_user.is_premium
+                }
             }
         )
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f"get_current_user error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ユーザー情報の取得に失敗しました: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="ユーザー情報の取得に失敗しました")
 
-@router.post("/refresh", response_model=AuthResponse)
-async def refresh_token(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    """トークンの更新"""
-    try:
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
-        # 新しいトークンを生成
-        new_access_token = auth_service.create_access_token(data={"sub": user.email})
-        
-        return AuthResponse(
-            success=True,
-            message="トークンを更新しました",
-            data={
-                "access_token": new_access_token,
-                "token_type": "bearer"
-            }
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="無効なトークンです"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"トークン更新に失敗しました: {str(e)}"
-        )
-
-@router.put("/me", response_model=AuthResponse)
-async def update_user(
-    request: UpdateUserRequest,
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    """ユーザー情報の更新"""
-    try:
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
-        # 更新可能なフィールドのみ更新
-        if request.name is not None:
-            user.name = request.name
-        
-        db.commit()
-        db.refresh(user)
-        
-        return AuthResponse(
-            success=True,
-            message="ユーザー情報を更新しました",
-            data={
-                "user": UserResponse(
-                    id=user.id,
-                    email=user.email,
-                    name=user.name,
-                    is_premium=user.is_premium,
-                    usage_count=user.usage_count,
-                    trial_start_date=user.trial_start_date,
-                    created_at=user.created_at
-                ).dict()
-            }
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="無効なトークンです"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"ユーザー情報の更新に失敗しました: {str(e)}"
-        )
-
-@router.get("/stats", response_model=AuthResponse)
-async def get_user_stats(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    """ユーザーの利用統計を取得"""
-    try:
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
-        # 統計情報を計算
-        from app.models.meeting import Meeting
-        
-        total_meetings = db.query(Meeting).filter(Meeting.user_id == user.id).count()
-        completed_meetings = db.query(Meeting).filter(
-            Meeting.user_id == user.id,
-            Meeting.status == "completed"
-        ).count()
-        
-        # 無料期間と利用回数の残りを取得
-        trial_remaining = auth_service.get_trial_remaining_days(user)
-        usage_remaining = auth_service.get_usage_remaining(user)
-        
-        return AuthResponse(
-            success=True,
-            message="利用統計を取得しました",
-            data={
-                "stats": UserStatsResponse(
-                    trial_remaining_days=trial_remaining,
-                    usage_remaining=usage_remaining,
-                    total_meetings=total_meetings,
-                    completed_meetings=completed_meetings
-                ).dict()
-            }
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="無効なトークンです"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"統計情報の取得に失敗しました: {str(e)}"
-        )
-
-@router.get("/health")
-async def auth_health_check():
-    """認証APIのヘルスチェック"""
-    return AuthResponse(
-        success=True,
-        message="認証APIは正常に動作しています",
-        data={
-            "version": "1.0.0",
-            "endpoints": [
-                "POST /api/auth/google",
-                "POST /api/auth/line", 
-                "GET /api/auth/me",
-                "POST /api/auth/refresh",
-                "PUT /api/auth/me",
-                "GET /api/auth/stats"
-            ]
-        }
-    ) 
+@router.post("/logout")
+async def logout():
+    """ログアウト（クライアント側でトークンを削除）"""
+    return {"message": "ログアウトしました"} 

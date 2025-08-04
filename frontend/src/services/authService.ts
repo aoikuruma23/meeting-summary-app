@@ -81,9 +81,31 @@ class AuthService {
 
   async lineAuth(code: string): Promise<AuthResponse> {
     try {
+      console.log('DEBUG: LINE認証API呼び出し開始');
+      console.log('DEBUG: コード長さ:', code.length);
+      console.log('DEBUG: API URL:', `${API_BASE_URL}/auth/line`);
+      
       const response = await apiClient.post('/auth/line', { code })
+      console.log('DEBUG: LINE認証APIレスポンス成功:', response.data);
+      console.log('DEBUG: レスポンスステータス:', response.status);
+      console.log('DEBUG: レスポンスヘッダー:', response.headers);
+      
+      if (!response.data || Object.keys(response.data).length === 0) {
+        console.error('DEBUG: レスポンスデータが空です');
+        throw new Error('バックエンドからのレスポンスが空です');
+      }
+      
       return response.data
     } catch (error: any) {
+      console.error('DEBUG: LINE認証APIエラー:', error);
+      console.error('DEBUG: エラー詳細:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        headers: error.response?.headers
+      });
+      
       if (error.response?.status === 503) {
         throw new Error('LINE OAuth設定が完了していません。ダミーログインをご利用ください。')
       }

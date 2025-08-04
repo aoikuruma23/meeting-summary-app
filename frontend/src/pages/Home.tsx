@@ -37,7 +37,34 @@ const Home: React.FC = () => {
       }
     }
 
+    // LINE認証のコールバック処理
+    const handleLineAuth = async () => {
+      try {
+        // URLパラメータからコードを取得
+        const urlParams = new URLSearchParams(window.location.search)
+        const code = urlParams.get('code')
+        const state = urlParams.get('state')
+        
+        if (code && state === 'line') {
+          console.log('DEBUG: LINE認証コードを検出')
+          
+          // LINE認証APIを呼び出し
+          const response = await authService.lineAuth(code)
+          
+          if (response.success && response.data) {
+            await login(response.data.access_token, response.data.user)
+            // URLパラメータをクリアしてリダイレクト
+            window.history.replaceState({}, document.title, window.location.pathname)
+            navigate('/')
+          }
+        }
+      } catch (error) {
+        console.error('LINE認証エラー:', error)
+      }
+    }
+
     handleGoogleAuth()
+    handleLineAuth()
   }, [login, navigate])
 
   if (!user) {
