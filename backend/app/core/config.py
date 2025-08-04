@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # LINE OAuth設定
     LINE_CHANNEL_ID: str = os.getenv("LINE_CHANNEL_ID", "2007873513")
     LINE_CHANNEL_SECRET: str = os.getenv("LINE_CHANNEL_SECRET", "47b545a350ba98551d1f6bcd5259f0a0")
-    LINE_REDIRECT_URI: str = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.onrender.com/auth/callback")
+    LINE_REDIRECT_URI: str = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.onrender.com")
     
     # ファイル設定
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB

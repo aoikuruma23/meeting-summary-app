@@ -73,23 +73,28 @@ const Login: React.FC = () => {
   };
 
   const handleLineLogin = async () => {
+    console.log('DEBUG: LINEログインボタンがクリックされました');
     setIsLoading(true);
     setError('');
 
     try {
       // LINE OAuth設定が完了していない場合の処理
       const lineChannelId = import.meta.env.VITE_LINE_CHANNEL_ID;
+      console.log('DEBUG: LINE_CHANNEL_ID:', lineChannelId);
       
       if (!lineChannelId) {
+        console.log('DEBUG: LINE_CHANNEL_IDが設定されていません');
         setError('LINEログインは現在準備中です。ダミーログインをご利用ください。');
         setIsLoading(false);
         return;
       }
 
       // LINE OAuth2.0の実装
-      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${lineChannelId}&redirect_uri=${encodeURIComponent(window.location.origin)}&state=line&scope=profile openid email`;
+      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${lineChannelId}&redirect_uri=${encodeURIComponent(window.location.origin)}&state=line&scope=profile%20openid%20email`;
+      console.log('DEBUG: LINE認証URL:', lineAuthUrl);
       window.location.href = lineAuthUrl;
     } catch (err) {
+      console.error('DEBUG: LINEログインエラー:', err);
       setError('LINEログインに失敗しました');
       setIsLoading(false);
     }
