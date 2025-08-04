@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.models.user import User
 from app.services.billing_service import BillingService
 from app.services.auth_service import AuthService
+from app.middleware.auth import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,24 +30,13 @@ class AccessCheckResponse(BaseModel):
 @router.post("/checkout", response_model=dict)
 async def create_checkout_session(
     request: CheckoutRequest,
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Stripeチェックアウトセッションを作成"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
         # チェックアウトセッション作成
-        result = billing_service.create_checkout_session(user, request.plan_id, db)
+        result = billing_service.create_checkout_session(current_user, request.plan_id, db)
         
         return result
         
@@ -61,24 +51,13 @@ async def create_checkout_session(
 
 @router.post("/portal", response_model=dict)
 async def create_portal_session(
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Stripeカスタマーポータルセッションを作成"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
         # ポータルセッション作成
-        result = billing_service.create_portal_session(user)
+        result = billing_service.create_portal_session(current_user)
         
         return result
         
@@ -98,57 +77,36 @@ async def stripe_webhook(request: Request):
         payload = await request.body()
         sig_header = request.headers.get("stripe-signature")
         
-        if not sig_header:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Stripe署名が見つかりません"
-            )
-        
+        # Webhook処理
         result = billing_service.handle_webhook(payload, sig_header)
         
-        if not result["success"]:
-            logger.error(f"Webhook処理エラー: {result.get('error', 'Unknown error')}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Webhook処理に失敗しました"
-            )
+        return result
         
-        return {"success": True, "message": result.get("message", "Webhook処理完了")}
-        
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Webhook処理エラー: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Webhook処理に失敗しました"
         )
 
 @router.get("/access", response_model=dict)
 async def check_access(
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """ユーザーのアクセス権限をチェック"""
+    """アクセス権限をチェック"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        user = db.query(User).filter(User.email == user_email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
-        
         # アクセス権限チェック
-        result = billing_service.check_access(user)
+        has_access = billing_service.check_access(current_user)
         
-        return result
+        return {
+            "success": True,
+            "message": "アクセス権限を確認しました",
+            "data": {
+                "hasAccess": has_access
+            }
+        }
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"アクセス権限チェックエラー: {str(e)}")
         raise HTTPException(
@@ -158,49 +116,45 @@ async def check_access(
 
 @router.get("/subscription", response_model=dict)
 async def get_subscription_status(
-    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """ユーザーのサブスクリプション状況を取得"""
+    """サブスクリプション状態を取得"""
     try:
-        # ユーザー認証
-        auth_service = AuthService()
-        user_email = auth_service.verify_token(token)
-        print(f"DEBUG: get_subscription_status endpoint - user_email: {user_email}")
-        user = db.query(User).filter(User.email == user_email).first()
+        print(f"DEBUG: get_subscription_status エンドポイント - user_id: {current_user.id}")
         
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ユーザーが見つかりません"
-            )
+        # サブスクリプション状態取得
+        subscription_info = billing_service.get_subscription_status(current_user)
         
-        print(f"DEBUG: get_subscription_status endpoint - found user: id={user.id}, email={user.email}, is_premium={user.is_premium}")
-        # サブスクリプション状況を取得
-        result = billing_service.get_subscription_status(user)
+        return {
+            "success": True,
+            "message": "サブスクリプション状態を取得しました",
+            "data": subscription_info
+        }
         
-        return result
-        
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"サブスクリプション状況取得エラー: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="サブスクリプション状況取得に失敗しました"
+            detail="サブスクリプション状態の取得に失敗しました"
         )
 
 @router.get("/pricing", response_model=dict)
 async def get_pricing_info():
-    """料金プラン情報を取得"""
+    """価格情報を取得"""
     try:
-        result = billing_service.get_pricing_info()
-        return result
-    except HTTPException:
-        raise
+        # 価格情報取得
+        pricing_info = billing_service.get_pricing_info()
+        
+        return {
+            "success": True,
+            "message": "価格情報を取得しました",
+            "data": pricing_info
+        }
+        
     except Exception as e:
         logger.error(f"価格情報取得エラー: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="価格情報取得に失敗しました"
+            detail="価格情報の取得に失敗しました"
         ) 

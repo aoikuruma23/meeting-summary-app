@@ -11,8 +11,12 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
+  console.log('DEBUG: recordingService - トークン取得:', token ? token.substring(0, 20) + '...' : 'なし')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+    console.log('DEBUG: recordingService - Authorization ヘッダー設定:', `Bearer ${token.substring(0, 20)}...`)
+  } else {
+    console.log('DEBUG: recordingService - トークンが見つかりません')
   }
   return config
 })
@@ -71,6 +75,7 @@ export interface RecordingStatus {
 
 class RecordingService {
   async startRecording(title: string): Promise<RecordingStartResponse> {
+    console.log('DEBUG: startRecording 呼び出し - title:', title)
     const response = await apiClient.post('/recording/start', { 
       title
     })
