@@ -64,12 +64,6 @@ const authService = {
         throw new Error('バックエンドからのレスポンスが空です')
       }
       
-      // トークンを保存
-      if (response.data.data?.access_token) {
-        localStorage.setItem('access_token', response.data.data.access_token)
-        localStorage.setItem('user', JSON.stringify(response.data.data.user))
-      }
-      
       return response.data
     } catch (error: any) {
       console.error('DEBUG: Google認証APIエラー:', error)
@@ -107,12 +101,6 @@ const authService = {
         throw new Error('バックエンドからのレスポンスが空です')
       }
       
-      // トークンを保存
-      if (response.data.data?.access_token) {
-        localStorage.setItem('access_token', response.data.data.access_token)
-        localStorage.setItem('user', JSON.stringify(response.data.data.user))
-      }
-      
       return response.data
     } catch (error: any) {
       console.error('DEBUG: LINE認証APIエラー:', error)
@@ -142,12 +130,6 @@ const authService = {
       const response = await apiClient.post('/auth/email/login', request)
       console.log('DEBUG: メールログインAPIレスポンス成功:', response.data)
       
-      // トークンを保存
-      if (response.data.data?.access_token) {
-        localStorage.setItem('access_token', response.data.data.access_token)
-        localStorage.setItem('user', JSON.stringify(response.data.data.user))
-      }
-      
       return response.data
     } catch (error: any) {
       console.error('DEBUG: メールログインAPIエラー:', error)
@@ -166,12 +148,6 @@ const authService = {
       
       const response = await apiClient.post('/auth/email/register', request)
       console.log('DEBUG: メール登録APIレスポンス成功:', response.data)
-      
-      // トークンを保存
-      if (response.data.data?.access_token) {
-        localStorage.setItem('access_token', response.data.data.access_token)
-        localStorage.setItem('user', JSON.stringify(response.data.data.user))
-      }
       
       return response.data
     } catch (error: any) {
