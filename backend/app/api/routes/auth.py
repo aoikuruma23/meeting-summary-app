@@ -11,33 +11,44 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
-from app.utils.auth import create_access_token, get_current_user
+from app.utils.auth import create_access_token, get_current_user, get_password_hash, verify_password
 
 router = APIRouter()
 security = HTTPBearer()
 
 class GoogleAuthRequest(BaseModel):
-    token: str
+    id_token: str
 
 class LineAuthRequest(BaseModel):
     code: str
 
+class EmailLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class EmailRegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
 class AuthResponse(BaseModel):
     success: bool
     message: str
-    data: Optional[dict] = None
+    data: dict = None
 
 @router.post("/google", response_model=AuthResponse)
 async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
     """Google OAuth認証"""
     try:
-        # Google IDトークンを検証
+        print(f"DEBUG: Google認証開始 - トークン長さ: {len(request.id_token)}")
+        
+        # Googleトークンを検証
         google_response = requests.get(
-            f"https://oauth2.googleapis.com/tokeninfo?id_token={request.token}"
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={request.id_token}"
         )
         
         if google_response.status_code != 200:
-            raise HTTPException(status_code=400, detail="Invalid Google token")
+            raise HTTPException(status_code=400, detail="Googleトークンが無効です")
         
         google_data = google_response.json()
         email = google_data.get("email")
@@ -45,7 +56,9 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
         picture = google_data.get("picture", "")
         
         if not email:
-            raise HTTPException(status_code=400, detail="Email not found in Google token")
+            raise HTTPException(status_code=400, detail="Google email not found")
+        
+        print(f"DEBUG: Google認証成功 - email: {email}")
         
         # ユーザーを取得または作成
         user = db.query(User).filter(User.email == email).first()
@@ -208,25 +221,121 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="LINE認証に失敗しました")
 
-@router.get("/me", response_model=AuthResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """現在のユーザー情報を取得"""
+@router.post("/email/login", response_model=AuthResponse)
+async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db)):
+    """メール・パスワードログイン"""
     try:
+        print(f"DEBUG: メールログイン開始 - email: {request.email}")
+        
+        # ユーザーを取得
+        user = db.query(User).filter(User.email == request.email).first()
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
+        
+        if not user.hashed_password:
+            raise HTTPException(status_code=401, detail="このアカウントはソーシャルログイン専用です")
+        
+        # パスワードを検証
+        if not verify_password(request.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
+        
+        print(f"DEBUG: メールログイン成功 - email: {user.email}")
+        
+        # アクセストークンを生成
+        access_token = create_access_token(data={"sub": user.email})
+        
         return AuthResponse(
             success=True,
-            message="ユーザー情報を取得しました",
+            message="ログインが成功しました",
             data={
+                "access_token": access_token,
+                "token_type": "bearer",
                 "user": {
-                    "id": current_user.id,
-                    "email": current_user.email,
-                    "name": current_user.name,
-                    "profile_picture": current_user.profile_picture,
-                    "is_premium": current_user.is_premium
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "profile_picture": user.profile_picture,
+                    "is_premium": user.is_premium
                 }
             }
         )
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="ユーザー情報の取得に失敗しました")
+        print(f"メールログインエラー: {str(e)}")
+        raise HTTPException(status_code=500, detail="ログインに失敗しました")
+
+@router.post("/email/register", response_model=AuthResponse)
+async def email_register(request: EmailRegisterRequest, db: Session = Depends(get_db)):
+    """メール・パスワード登録"""
+    try:
+        print(f"DEBUG: メール登録開始 - email: {request.email}")
+        
+        # 既存ユーザーをチェック
+        existing_user = db.query(User).filter(User.email == request.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="このメールアドレスは既に登録されています")
+        
+        # パスワードをハッシュ化
+        hashed_password = get_password_hash(request.password)
+        
+        # 新規ユーザーを作成
+        user = User(
+            email=request.email,
+            name=request.name,
+            hashed_password=hashed_password,
+            auth_provider="email",
+            is_premium="false"  # メール登録は無料プラン
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        print(f"DEBUG: メール登録成功 - ID: {user.id}")
+        
+        # アクセストークンを生成
+        access_token = create_access_token(data={"sub": user.email})
+        
+        return AuthResponse(
+            success=True,
+            message="登録が成功しました",
+            data={
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "profile_picture": user.profile_picture,
+                    "is_premium": user.is_premium
+                }
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"メール登録エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail="登録に失敗しました")
+
+@router.get("/me", response_model=AuthResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """現在のユーザー情報を取得"""
+    return AuthResponse(
+        success=True,
+        message="ユーザー情報を取得しました",
+        data={
+            "user": {
+                "id": current_user.id,
+                "email": current_user.email,
+                "name": current_user.name,
+                "profile_picture": current_user.profile_picture,
+                "is_premium": current_user.is_premium
+            }
+        }
+    )
 
 @router.post("/logout")
 async def logout():
