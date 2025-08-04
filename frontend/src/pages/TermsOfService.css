@@ -22,6 +22,21 @@
   top: 0;
 }
 
+.terms-content h1 {
+  color: #333;
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+.last-updated {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  margin-bottom: 30px;
+}
+
 .terms-section {
   margin-bottom: 30px;
 }

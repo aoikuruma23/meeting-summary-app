@@ -9,6 +9,7 @@
   align-items: center;
   position: relative;
   top: 0;
+  scroll-behavior: smooth;
 }
 
 .help-content {
