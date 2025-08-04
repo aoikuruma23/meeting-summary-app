@@ -37,9 +37,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def verify_token(token: str) -> Optional[dict]:
     """トークンを検証"""
     try:
+        print(f"DEBUG: verify_token 開始 - トークン長さ: {len(token)}")
+        print(f"DEBUG: トークン先頭20文字: {token[:20]}")
+        
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        print(f"DEBUG: JWT デコード成功 - payload: {payload}")
         return payload
-    except JWTError:
+    except JWTError as e:
+        print(f"DEBUG: JWT デコードエラー: {str(e)}")
+        return None
+    except Exception as e:
+        print(f"DEBUG: verify_token 予期しないエラー: {str(e)}")
         return None
 
 def get_current_user(
