@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.middleware.auth import get_current_user_dummy
+from app.middleware.auth import get_current_user
 from app.services.summary_service import SummaryService
 from app.services.productivity_service import ProductivityService
 from app.models.meeting import Meeting, Speaker, Utterance
@@ -9,6 +9,80 @@ from typing import Dict, Any
 import json
 
 router = APIRouter(tags=["summary"])
+
+@router.get("/{meeting_id}")
+async def get_summary(
+    meeting_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """要約を取得"""
+    try:
+        # 会議データを取得
+        meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+        if not meeting:
+            raise HTTPException(status_code=404, detail="会議が見つかりません")
+        
+        if not meeting.summary:
+            raise HTTPException(status_code=404, detail="要約が見つかりません")
+        
+        return {
+            "success": True,
+            "message": "要約を取得しました",
+            "data": {
+                "meeting_id": meeting_id,
+                "summary": meeting.summary,
+                "title": meeting.title,
+                "status": meeting.status
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"要約取得に失敗しました: {str(e)}")
+
+@router.post("/export/{meeting_id}")
+async def export_summary(
+    meeting_id: int,
+    format: str = "pdf",
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """要約をエクスポート"""
+    try:
+        # 会議データを取得
+        meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+        if not meeting:
+            raise HTTPException(status_code=404, detail="会議が見つかりません")
+        
+        if not meeting.summary:
+            raise HTTPException(status_code=404, detail="要約が見つかりません")
+        
+        # エクスポートサービスを使用
+        from app.services.export_service import ExportService
+        export_service = ExportService()
+        
+        if format == "pdf":
+            file_path = await export_service.export_to_pdf(meeting)
+        elif format == "docx":
+            file_path = await export_service.export_to_docx(meeting)
+        else:
+            raise HTTPException(status_code=400, detail="サポートされていない形式です")
+        
+        return {
+            "success": True,
+            "message": f"要約を{format.upper()}形式でエクスポートしました",
+            "data": {
+                "file_path": file_path,
+                "format": format
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"エクスポートに失敗しました: {str(e)}")
 
 @router.get("/health")
 async def health_check():

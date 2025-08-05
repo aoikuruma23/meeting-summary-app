@@ -98,11 +98,14 @@ class BillingService:
                 detail=f"ポータルセッションの作成に失敗しました: {str(e)}"
             )
     
-    def get_subscription_status(self, user: User) -> dict:
+    def get_subscription_status(self, user: User, db: Session) -> dict:
         """サブスクリプション状態を取得"""
         try:
             print(f"DEBUG: get_subscription_status - user_id: {user.id}, is_premium: {user.is_premium}, type: {type(user.is_premium)}")
-            print(f"ERROR: データベースのis_premiumがfalseになっています！Webhookが正しく処理されていない可能性があります。")
+            # データベースの実際の値を確認
+            db_user = db.query(User).filter(User.id == user.id).first()
+            if db_user and db_user.is_premium != user.is_premium:
+                print(f"WARNING: データベースのis_premium ({db_user.is_premium}) とユーザーオブジェクトのis_premium ({user.is_premium}) が一致しません")
             # プレミアムユーザーの場合
             if user.is_premium == "true":
                 if user.stripe_subscription_id:
@@ -181,7 +184,7 @@ class BillingService:
                 detail=f"価格情報の取得に失敗しました: {str(e)}"
             )
     
-    def check_access(self, user: User) -> dict:
+    def check_access(self, user: User, db: Session) -> dict:
         """アクセス権限をチェック"""
         try:
             # プレミアムユーザーの場合

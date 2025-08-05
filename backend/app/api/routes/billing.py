@@ -97,15 +97,9 @@ async def check_access(
     """アクセス権限をチェック"""
     try:
         # アクセス権限チェック
-        has_access = billing_service.check_access(current_user)
+        has_access = billing_service.check_access(current_user, db)
         
-        return {
-            "success": True,
-            "message": "アクセス権限を確認しました",
-            "data": {
-                "hasAccess": has_access
-            }
-        }
+        return has_access
         
     except Exception as e:
         logger.error(f"アクセス権限チェックエラー: {str(e)}")
@@ -124,7 +118,7 @@ async def get_subscription_status(
         print(f"DEBUG: get_subscription_status エンドポイント - user_id: {current_user.id}")
         
         # サブスクリプション状態取得
-        subscription_info = billing_service.get_subscription_status(current_user)
+        subscription_info = billing_service.get_subscription_status(current_user, db)
         
         return {
             "success": True,
