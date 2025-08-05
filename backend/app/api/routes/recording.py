@@ -67,6 +67,16 @@ async def start_recording(
                 detail="無料期間が終了しました。有料プランにアップグレードしてください。"
             )
         
+        # 無料ユーザーの利用回数制限チェック
+        if not is_premium:
+            usage_count = current_user.usage_count or 0
+            free_limit = int(settings.FREE_USAGE_LIMIT)
+            if usage_count >= free_limit:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail=f"無料プランの利用回数上限（{free_limit}回）に達しました。プレミアムプランにアップグレードしてください。"
+                )
+        
         # 録音時間制限を設定（無料ユーザーは30分、プレミアムユーザーは2時間）
         max_duration = 120 if is_premium else 30  # プレミアム: 2時間、無料: 30分
         print(f"DEBUG: 録音時間制限設定 - max_duration: {max_duration}分 (プレミアム: {is_premium})")

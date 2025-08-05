@@ -39,8 +39,8 @@ class BillingService:
                         'quantity': 1,
                     }],
                     mode='subscription',
-                    success_url='http://localhost:3000/billing?success=true',
-                    cancel_url='http://localhost:3000/billing?canceled=true',
+                    success_url='https://meeting-summary-app.onrender.com/billing?success=true',
+                    cancel_url='https://meeting-summary-app.onrender.com/billing?canceled=true',
                     metadata={
                         'user_id': str(user.id),
                         'plan_id': plan_id
@@ -60,7 +60,7 @@ class BillingService:
                     "success": True,
                     "message": "無料プランにアクセスしました",
                     "data": {
-                        "url": "http://localhost:3000/"
+                        "url": "https://meeting-summary-app.onrender.com/"
                     }
                 }
                 
@@ -81,7 +81,7 @@ class BillingService:
             
             session = stripe.billing_portal.Session.create(
                 customer=user.stripe_customer_id,
-                return_url='http://localhost:3000/billing',
+                return_url='https://meeting-summary-app.onrender.com/billing',
             )
             
             return {

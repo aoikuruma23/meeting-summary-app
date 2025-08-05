@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -53,6 +53,14 @@ async def export_summary(
 ):
     """要約をエクスポート"""
     try:
+        # プレミアム権限チェック
+        is_premium = current_user.is_premium == "true"
+        if not is_premium:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="エクスポート機能はプレミアムプランのみ利用可能です。プレミアムプランにアップグレードしてください。"
+            )
+        
         # 会議データを取得
         meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
         if not meeting:
