@@ -21,6 +21,15 @@ try:
 except Exception as e:
     print(f"マイグレーションエラー（無視可能）: {e}")
 
+# ユーザープレミアム状態を修正
+try:
+    from fix_user_premium import fix_user_premium_status
+    print("ユーザープレミアム状態を修正中...")
+    fix_user_premium_status()
+    print("ユーザープレミアム状態修正完了")
+except Exception as e:
+    print(f"ユーザープレミアム状態修正エラー（無視可能）: {e}")
+
 app = FastAPI(title="Meeting Summary API", version="1.0.0")
 
 # CORS設定

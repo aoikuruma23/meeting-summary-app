@@ -19,7 +19,7 @@ interface SubscriptionStatus {
 }
 
 const Billing: React.FC = () => {
-  const { user: _ } = useAuth();
+  const { user } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -116,21 +116,27 @@ const Billing: React.FC = () => {
         <p>あなたに最適なプランを選択してください</p>
       </div>
 
-      {subscription && (
+      {(subscription || user?.is_premium === "true") && (
         <div className="current-subscription">
           <h2>現在のサブスクリプション</h2>
           <div className="subscription-card">
             <div className="subscription-info">
-              <h3>{subscription.plan === 'premium' ? 'プレミアムプラン' : '無料プラン'}</h3>
-              <p>ステータス: {subscription.isActive ? 'アクティブ' : '非アクティブ'}</p>
-              {subscription.currentPeriodEnd && (
+              <h3>
+                {user?.is_premium === "true" ? 'プレミアムプラン' : 
+                 subscription?.plan === 'premium' ? 'プレミアムプラン' : '無料プラン'}
+              </h3>
+              <p>ステータス: {
+                user?.is_premium === "true" ? 'アクティブ' :
+                subscription?.isActive ? 'アクティブ' : '非アクティブ'
+              }</p>
+              {subscription?.currentPeriodEnd && (
                 <p>次回更新: {new Date(subscription.currentPeriodEnd).toLocaleDateString('ja-JP')}</p>
               )}
-              {subscription.cancelAtPeriodEnd && (
+              {subscription?.cancelAtPeriodEnd && (
                 <p className="cancel-notice">期間終了時にキャンセル予定</p>
               )}
             </div>
-            {subscription.isActive && subscription.plan === 'premium' && (
+            {user?.is_premium === "true" || (subscription?.isActive && subscription?.plan === 'premium') ? (
               <button 
                 onClick={handleManageSubscription}
                 disabled={portalLoading}
@@ -138,7 +144,7 @@ const Billing: React.FC = () => {
               >
                 {portalLoading ? '読み込み中...' : 'サブスクリプション管理'}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       )}
@@ -166,11 +172,15 @@ const Billing: React.FC = () => {
               </ul>
               <button
                 onClick={() => handleCheckout(plan.id)}
-                disabled={checkoutLoading || (subscription?.isActive && subscription?.plan === plan.id)}
+                disabled={checkoutLoading || 
+                  (subscription?.isActive && subscription?.plan === plan.id) ||
+                  (user?.is_premium === "true" && plan.id === 'premium')
+                }
                 className={`plan-button ${plan.popular ? 'primary' : 'secondary'}`}
               >
                 {checkoutLoading ? '処理中...' : 
-                  subscription?.isActive && subscription?.plan === plan.id ? '現在のプラン' :
+                  (subscription?.isActive && subscription?.plan === plan.id) || 
+                  (user?.is_premium === "true" && plan.id === 'premium') ? '現在のプラン' :
                   plan.price === 0 ? '無料で開始' : 'プレミアムにアップグレード'
                 }
               </button>
