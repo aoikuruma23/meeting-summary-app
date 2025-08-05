@@ -65,19 +65,27 @@ const History: React.FC = () => {
       // エクスポートファイルを生成
       const response = await recordingService.exportSummary(meetingId, format)
       
-      if (response.data && response.data.download_url) {
-        // ファイルをダウンロード
-        const blob = await recordingService.downloadExport(response.data.filename)
+      if (response.success && response.data && response.data.filename) {
+        // 直接ダウンロードリンクを作成
+        const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/summary/download/${response.data.filename}`
+        
+        // 認証トークンを取得
+        const token = localStorage.getItem('access_token')
         
         // ダウンロードリンクを作成
-        const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
-        link.href = url
+        link.href = downloadUrl
         link.download = response.data.filename
+        link.target = '_blank'
+        
+        // 認証ヘッダーを設定（必要に応じて）
+        if (token) {
+          link.setAttribute('data-token', token)
+        }
+        
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
         
         alert(`${format.toUpperCase()}ファイルをダウンロードしました`)
       }

@@ -19,6 +19,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         is_premium = "true"
         username = "dummy_user"
         is_active = "active"
+        usage_count = 0
+        trial_start_date = None
+        auth_provider = "google"
+        google_id = "dummy_google_id"
+        line_user_id = None
+        stripe_customer_id = None
+        stripe_subscription_id = None
+        created_at = None
+        updated_at = None
     
     print("DEBUG: ダミーユーザーを返します")
     return DummyUser()

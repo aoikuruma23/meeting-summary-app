@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.middleware.auth import get_current_user
@@ -7,6 +8,7 @@ from app.services.productivity_service import ProductivityService
 from app.models.meeting import Meeting, Speaker, Utterance
 from typing import Dict, Any
 import json
+import os
 
 router = APIRouter(tags=["summary"])
 
@@ -75,6 +77,8 @@ async def export_summary(
             "message": f"要約を{format.upper()}形式でエクスポートしました",
             "data": {
                 "file_path": file_path,
+                "filename": os.path.basename(file_path),
+                "download_url": f"/api/summary/download/{os.path.basename(file_path)}",
                 "format": format
             }
         }
@@ -250,4 +254,31 @@ async def get_productivity_report(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"生産性レポート取得に失敗しました: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"生産性レポート取得に失敗しました: {str(e)}")
+
+@router.get("/download/{filename}")
+async def download_export(
+    filename: str,
+    current_user = Depends(get_current_user)
+):
+    """エクスポートファイルをダウンロード"""
+    try:
+        # エクスポートディレクトリのパスを構築
+        export_dir = os.path.join("uploads", "exports")
+        file_path = os.path.join(export_dir, filename)
+        
+        # ファイルの存在確認
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="ファイルが見つかりません")
+        
+        # ファイルを返す
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type='application/octet-stream'
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ファイルダウンロードに失敗しました: {str(e)}") 
