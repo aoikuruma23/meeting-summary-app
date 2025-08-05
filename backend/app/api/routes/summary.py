@@ -104,7 +104,7 @@ async def health_check():
 async def regenerate_summary(
     meeting_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dummy)
+    current_user = Depends(get_current_user)
 ):
     """要約を再生成"""
     try:
@@ -144,7 +144,7 @@ async def regenerate_summary(
 async def get_speaker_summary(
     meeting_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dummy)
+    current_user = Depends(get_current_user)
 ):
     """話者別要約を取得"""
     try:
@@ -199,7 +199,7 @@ async def get_speaker_summary(
 async def get_productivity_report(
     meeting_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dummy)
+    current_user = Depends(get_current_user)
 ):
     """生産性レポートを取得"""
     try:
