@@ -17,6 +17,7 @@ class ExportService:
     def __init__(self):
         self.export_dir = os.path.join(settings.UPLOAD_DIR, "exports")
         os.makedirs(self.export_dir, exist_ok=True)
+        print(f"DEBUG: エクスポートディレクトリ作成: {self.export_dir}")
     
     def _create_japanese_font(self):
         """日本語フォントを設定"""
@@ -52,12 +53,12 @@ class ExportService:
             print(f"フォント作成エラー: {str(e)}")
             return 'Helvetica'
     
-    def export_to_pdf(self, meeting_title: str, summary_content: str, meeting_id: int) -> str:
+    async def export_to_pdf(self, meeting) -> str:
         """要約をPDF形式でエクスポート"""
         try:
             # ファイル名を生成
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"meeting_{meeting_id}_{timestamp}.pdf"
+            filename = f"meeting_{meeting.id}_{timestamp}.pdf"
             file_path = os.path.join(self.export_dir, filename)
             
             # PDFドキュメントを作成
@@ -112,16 +113,16 @@ class ExportService:
             story.append(Spacer(1, 20))
             
             # 会議情報を追加
-            story.append(Paragraph(safe_text(f"会議タイトル: {meeting_title}"), heading_style))
+            story.append(Paragraph(safe_text(f"会議タイトル: {meeting.title}"), heading_style))
             story.append(Paragraph(safe_text(f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}"), normal_style))
-            story.append(Paragraph(safe_text(f"議事録ID: {meeting_id}"), normal_style))
+            story.append(Paragraph(safe_text(f"議事録ID: {meeting.id}"), normal_style))
             story.append(Spacer(1, 20))
             
             # 要約内容を追加
             story.append(Paragraph(safe_text("要約内容"), heading_style))
             
             # 要約を段落に分割して追加
-            paragraphs = summary_content.split('\n\n')
+            paragraphs = meeting.summary.split('\n\n')
             for paragraph in paragraphs:
                 if paragraph.strip():
                     story.append(Paragraph(safe_text(paragraph.strip()), normal_style))
@@ -133,14 +134,15 @@ class ExportService:
             return file_path
             
         except Exception as e:
+            print(f"ERROR: PDFエクスポート失敗: {str(e)}")
             raise Exception(f"PDFエクスポートに失敗しました: {str(e)}")
     
-    def export_to_word(self, meeting_title: str, summary_content: str, meeting_id: int) -> str:
+    async def export_to_docx(self, meeting) -> str:
         """要約をWord形式でエクスポート"""
         try:
             # ファイル名を生成
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"meeting_{meeting_id}_{timestamp}.docx"
+            filename = f"meeting_{meeting.id}_{timestamp}.docx"
             file_path = os.path.join(self.export_dir, filename)
             
             # Wordドキュメントを作成
@@ -152,15 +154,15 @@ class ExportService:
             
             # 会議情報を追加
             doc.add_heading("会議情報", level=1)
-            doc.add_paragraph(f"会議タイトル: {meeting_title}")
+            doc.add_paragraph(f"会議タイトル: {meeting.title}")
             doc.add_paragraph(f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}")
-            doc.add_paragraph(f"議事録ID: {meeting_id}")
+            doc.add_paragraph(f"議事録ID: {meeting.id}")
             
             # 要約内容を追加
             doc.add_heading("要約内容", level=1)
             
             # 要約を段落に分割して追加
-            paragraphs = summary_content.split('\n\n')
+            paragraphs = meeting.summary.split('\n\n')
             for paragraph in paragraphs:
                 if paragraph.strip():
                     doc.add_paragraph(paragraph.strip())
@@ -171,6 +173,7 @@ class ExportService:
             return file_path
             
         except Exception as e:
+            print(f"ERROR: Wordエクスポート失敗: {str(e)}")
             raise Exception(f"Wordエクスポートに失敗しました: {str(e)}")
     
     def cleanup_old_exports(self, max_age_hours: int = 24):
