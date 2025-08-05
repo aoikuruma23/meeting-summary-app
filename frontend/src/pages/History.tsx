@@ -66,28 +66,33 @@ const History: React.FC = () => {
       const response = await recordingService.exportSummary(meetingId, format)
       
       if (response.success && response.data && response.data.filename) {
-        // 直接ダウンロードリンクを作成
-        const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/summary/download/${response.data.filename}`
-        
         // 認証トークンを取得
         const token = localStorage.getItem('access_token')
         
-        // ダウンロードリンクを作成
-        const link = document.createElement('a')
-        link.href = downloadUrl
-        link.download = response.data.filename
-        link.target = '_blank'
+        // 認証ヘッダー付きでファイルをダウンロード
+        const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/summary/download/${response.data.filename}`
         
-        // 認証ヘッダーを設定（必要に応じて）
-        if (token) {
-          link.setAttribute('data-token', token)
+        const downloadResponse = await fetch(downloadUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (downloadResponse.ok) {
+          const blob = await downloadResponse.blob()
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = response.data.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+          
+          alert(`${format.toUpperCase()}ファイルをダウンロードしました`)
+        } else {
+          throw new Error('ダウンロードに失敗しました')
         }
-        
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
-        alert(`${format.toUpperCase()}ファイルをダウンロードしました`)
       }
     } catch (error: any) {
       console.error('エクスポートエラー:', error)
