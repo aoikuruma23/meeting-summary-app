@@ -6,11 +6,10 @@ from app.api.routes import auth, recording, summary, billing
 from app.core.database import engine, Base
 from app.middleware.rate_limit import rate_limit_logging_middleware
 
-# データベーステーブルを強制的に再作成
-print("データベーステーブルを再作成中...")
-Base.metadata.drop_all(bind=engine)
+# データベーステーブルを作成（既存データは保持）
+print("データベーステーブルを作成中...")
 Base.metadata.create_all(bind=engine)
-print("✓ データベーステーブルの再作成完了")
+print("✓ データベーステーブルの作成完了")
 
 # マイグレーションを実行（念のため）
 try:
