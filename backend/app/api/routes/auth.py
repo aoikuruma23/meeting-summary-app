@@ -33,6 +33,49 @@ def validate_email(email: str) -> bool:
     if username.isdigit():
         return False
     
+    # 架空のドメインをチェック
+    suspicious_domains = [
+        'example.com', 'test.com', 'fake.com', 'dummy.com', 'temp.com',
+        'localhost', '127.0.0.1', '0.0.0.0', 'invalid.com', 'nonexistent.com',
+        'anstuma.com', 'anstuma.net', 'anstuma.org', 'anstuma.info',
+        'test.org', 'test.net', 'test.info', 'test.biz',
+        'fake.org', 'fake.net', 'fake.info', 'fake.biz',
+        'dummy.org', 'dummy.net', 'dummy.info', 'dummy.biz',
+        'temp.org', 'temp.net', 'temp.info', 'temp.biz',
+        'example.org', 'example.net', 'example.info', 'example.biz',
+        'localhost.com', 'localhost.net', 'localhost.org',
+        '127.0.0.1.com', '127.0.0.1.net', '127.0.0.1.org',
+        '0.0.0.0.com', '0.0.0.0.net', '0.0.0.0.org',
+        'invalid.org', 'invalid.net', 'invalid.info', 'invalid.biz',
+        'nonexistent.org', 'nonexistent.net', 'nonexistent.info', 'nonexistent.biz'
+    ]
+    
+    domain = email.split('@')[1].lower()
+    if domain in suspicious_domains:
+        return False
+    
+    # 架空のユーザー名パターンをチェック
+    suspicious_usernames = [
+        'test', 'fake', 'dummy', 'temp', 'admin', 'user', 'guest',
+        'demo', 'sample', 'example', 'anonymous', 'unknown', 'nobody',
+        'antasu', 'anstuma', 'testuser', 'fakeuser', 'dummyuser',
+        'tempuser', 'adminuser', 'guestuser', 'demouser', 'sampleuser',
+        'exampleuser', 'anonymoususer', 'unknownuser', 'nobodyuser',
+        'a', 'aa', 'aaa', 'ab', 'abc', 'abcd', 'abcde',
+        'q', 'qq', 'qqq', 'qqqq', 'qqqqq',
+        '1', '11', '111', '1111', '11111',
+        'x', 'xx', 'xxx', 'xxxx', 'xxxxx',
+        'z', 'zz', 'zzz', 'zzzz', 'zzzzz',
+        'kisitakanodesu', 'snskaizoku', 'akaisimituru'
+    ]
+    
+    if username.lower() in suspicious_usernames:
+        return False
+    
+    # 連続した文字や数字のパターン
+    if re.match(r'^(.)\1{2,}$', username):  # 同じ文字が3回以上連続
+        return False
+    
     return True
 
 def get_email_validation_error(email: str) -> str:
@@ -50,6 +93,49 @@ def get_email_validation_error(email: str) -> str:
     # 数字のみのユーザー名を拒否
     if username.isdigit():
         return "このメールアドレスは使用できません。数字のみのメールアドレスは使用できません。"
+    
+    # 架空のドメインをチェック
+    suspicious_domains = [
+        'example.com', 'test.com', 'fake.com', 'dummy.com', 'temp.com',
+        'localhost', '127.0.0.1', '0.0.0.0', 'invalid.com', 'nonexistent.com',
+        'anstuma.com', 'anstuma.net', 'anstuma.org', 'anstuma.info',
+        'test.org', 'test.net', 'test.info', 'test.biz',
+        'fake.org', 'fake.net', 'fake.info', 'fake.biz',
+        'dummy.org', 'dummy.net', 'dummy.info', 'dummy.biz',
+        'temp.org', 'temp.net', 'temp.info', 'temp.biz',
+        'example.org', 'example.net', 'example.info', 'example.biz',
+        'localhost.com', 'localhost.net', 'localhost.org',
+        '127.0.0.1.com', '127.0.0.1.net', '127.0.0.1.org',
+        '0.0.0.0.com', '0.0.0.0.net', '0.0.0.0.org',
+        'invalid.org', 'invalid.net', 'invalid.info', 'invalid.biz',
+        'nonexistent.org', 'nonexistent.net', 'nonexistent.info', 'nonexistent.biz'
+    ]
+    
+    domain = email.split('@')[1].lower()
+    if domain in suspicious_domains:
+        return "このメールアドレスは使用できません。架空のドメインは使用できません。"
+    
+    # 架空のユーザー名パターンをチェック
+    suspicious_usernames = [
+        'test', 'fake', 'dummy', 'temp', 'admin', 'user', 'guest',
+        'demo', 'sample', 'example', 'anonymous', 'unknown', 'nobody',
+        'antasu', 'anstuma', 'testuser', 'fakeuser', 'dummyuser',
+        'tempuser', 'adminuser', 'guestuser', 'demouser', 'sampleuser',
+        'exampleuser', 'anonymoususer', 'unknownuser', 'nobodyuser',
+        'a', 'aa', 'aaa', 'ab', 'abc', 'abcd', 'abcde',
+        'q', 'qq', 'qqq', 'qqqq', 'qqqqq',
+        '1', '11', '111', '1111', '11111',
+        'x', 'xx', 'xxx', 'xxxx', 'xxxxx',
+        'z', 'zz', 'zzz', 'zzzz', 'zzzzz',
+        'kisitakanodesu', 'snskaizoku', 'akaisimituru'
+    ]
+    
+    if username.lower() in suspicious_usernames:
+        return "このメールアドレスは使用できません。架空のユーザー名は使用できません。"
+    
+    # 連続した文字や数字のパターン
+    if re.match(r'^(.)\1{2,}$', username):  # 同じ文字が3回以上連続
+        return "このメールアドレスは使用できません。不自然なパターンは使用できません。"
     
     return "このメールアドレスは使用できません。別のメールアドレスをお試しください。"
 
@@ -277,10 +363,6 @@ async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db))
         if not user:
             raise HTTPException(status_code=400, detail="メールアドレスまたはパスワードが正しくありません")
         
-        # メール確認済みかチェック
-        if user.is_active != "active":
-            raise HTTPException(status_code=400, detail="メール確認が必要です")
-        
         # パスワードを検証
         if not verify_password(request.password, user.hashed_password):
             raise HTTPException(status_code=400, detail="メールアドレスまたはパスワードが正しくありません")
@@ -342,14 +424,14 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         # パスワードをハッシュ化
         hashed_password = get_password_hash(request.password)
         
-        # 新規ユーザーを作成（メール確認待ち状態）
+        # 新規ユーザーを作成（直接アクティブ）
         user = User(
             email=request.email,
             name=request.name,
             hashed_password=hashed_password,
             auth_provider="email",
             is_premium="false",  # メール登録は無料プラン
-            is_active="pending"  # メール確認待ち
+            is_active="active"  # 直接アクティブにする
         )
         db.add(user)
         db.commit()
@@ -357,13 +439,15 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         
         print(f"DEBUG: メール登録成功 - ID: {user.id}")
         
-        # メール確認トークンを生成（実際のメール送信は実装しない）
-        # 本番環境では実際のメール送信機能を実装する必要があります
+        # アクセストークンを生成
+        access_token = create_access_token(data={"sub": str(user.id)})
         
         return AuthResponse(
             success=True,
-            message="登録が成功しました。メール確認が必要です。",
+            message="登録が成功しました",
             data={
+                "access_token": access_token,
+                "token_type": "bearer",
                 "user": {
                     "id": user.id,
                     "email": user.email,
