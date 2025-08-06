@@ -67,6 +67,48 @@ def validate_email(email: str) -> bool:
         print(f"DEBUG: 許可されていないドメイン: {domain}")
         return False
     
+    # 架空のユーザー名をチェック
+    username = email.split('@')[0].lower()
+    
+    # 短すぎるユーザー名（3文字未満）
+    if len(username) < 3:
+        print(f"DEBUG: 短すぎるユーザー名: {username}")
+        return False
+    
+    # 架空のユーザー名パターン
+    suspicious_usernames = [
+        'test', 'fake', 'dummy', 'temp', 'admin', 'user', 'guest',
+        'demo', 'sample', 'example', 'anonymous', 'unknown', 'nobody',
+        'antasu', 'anstuma', 'testuser', 'fakeuser', 'dummyuser',
+        'tempuser', 'adminuser', 'guestuser', 'demouser', 'sampleuser',
+        'exampleuser', 'anonymoususer', 'unknownuser', 'nobodyuser',
+        'a', 'aa', 'aaa', 'ab', 'abc', 'abcd', 'abcde',
+        'q', 'qq', 'qqq', 'qqqq', 'qqqqq',
+        '1', '11', '111', '1111', '11111',
+        'x', 'xx', 'xxx', 'xxxx', 'xxxxx',
+        'z', 'zz', 'zzz', 'zzzz', 'zzzzz'
+    ]
+    
+    if username in suspicious_usernames:
+        print(f"DEBUG: 架空のユーザー名検出: {username}")
+        return False
+    
+    # 連続した文字や数字のパターン
+    if re.match(r'^(.)\1{2,}$', username):  # 同じ文字が3回以上連続
+        print(f"DEBUG: 不自然なユーザー名パターン: {username}")
+        return False
+    
+    # 数字のみのユーザー名
+    if username.isdigit():
+        print(f"DEBUG: 数字のみのユーザー名: {username}")
+        return False
+    
+    # 特殊文字のみのユーザー名
+    if re.match(r'^[._-]+$', username):
+        print(f"DEBUG: 特殊文字のみのユーザー名: {username}")
+        return False
+    
+    print(f"DEBUG: メールアドレス検証成功: {email}")
     return True
 
 class GoogleAuthRequest(BaseModel):
@@ -344,8 +386,12 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
             raise HTTPException(status_code=400, detail="このメールアドレスは既に登録されています")
         
         # メールアドレスの形式を検証
+        print(f"DEBUG: メール検証開始 - {request.email}")
         if not validate_email(request.email):
+            print(f"DEBUG: メール検証失敗 - {request.email}")
             raise HTTPException(status_code=400, detail="無効なメールアドレス形式です")
+        
+        print(f"DEBUG: メール検証成功 - {request.email}")
 
         # パスワードをハッシュ化
         hashed_password = get_password_hash(request.password)
