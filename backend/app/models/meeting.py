@@ -1,7 +1,13 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from datetime import datetime, timezone, timedelta
 from app.core.database import Base
+
+def jst_now():
+    """日本時間（JST）の現在時刻を返す"""
+    jst = timezone(timedelta(hours=9))
+    return datetime.now(jst)
 
 class Meeting(Base):
     __tablename__ = "meetings"
@@ -39,9 +45,9 @@ class Meeting(Base):
     # 暗号化
     is_encrypted = Column(String, default="false")
     
-    # メタデータ
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    # メタデータ（日本時間で保存）
+    created_at = Column(DateTime, default=jst_now)
+    updated_at = Column(DateTime, default=jst_now, onupdate=jst_now)
     
     # リレーション
     # user = relationship("User", back_populates="meetings")  # 一時的にコメントアウト
@@ -64,8 +70,8 @@ class AudioChunk(Base):
     # 処理状況
     status = Column(String, default="uploaded")  # uploaded, transcribed, error
     
-    # メタデータ
-    created_at = Column(DateTime, default=func.now())
+    # メタデータ（日本時間で保存）
+    created_at = Column(DateTime, default=jst_now)
     
     # リレーション
     meeting = relationship("Meeting", back_populates="chunks")
@@ -81,8 +87,8 @@ class Speaker(Base):
     speaker_id = Column(String)  # Whisperが生成する話者ID
     name = Column(String, nullable=True)  # ユーザーが設定する名前
     
-    # メタデータ
-    created_at = Column(DateTime, default=func.now())
+    # メタデータ（日本時間で保存）
+    created_at = Column(DateTime, default=jst_now)
     
     # リレーション
     meeting = relationship("Meeting", back_populates="speakers")
@@ -102,8 +108,8 @@ class Utterance(Base):
     text = Column(Text)         # 発言内容
     confidence = Column(Float, nullable=True)  # 信頼度
     
-    # メタデータ
-    created_at = Column(DateTime, default=func.now())
+    # メタデータ（日本時間で保存）
+    created_at = Column(DateTime, default=jst_now)
     
     # リレーション
     meeting = relationship("Meeting", back_populates="utterances")

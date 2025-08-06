@@ -108,12 +108,17 @@ const History: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', {
+    
+    // 日本時間（JST）に変換
+    const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
+    
+    return jstDate.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Asia/Tokyo'
     })
   }
 

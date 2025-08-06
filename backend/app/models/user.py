@@ -1,7 +1,13 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from datetime import datetime, timezone, timedelta
 from app.core.database import Base
+
+def jst_now():
+    """日本時間（JST）の現在時刻を返す"""
+    jst = timezone(timedelta(hours=9))
+    return datetime.now(jst)
 
 class User(Base):
     __tablename__ = "users"
@@ -17,7 +23,7 @@ class User(Base):
     profile_picture = Column(String, nullable=True)
     is_premium = Column(String, default="false")
     usage_count = Column(Integer, default=0)
-    trial_start_date = Column(DateTime, default=func.now())
+    trial_start_date = Column(DateTime, default=jst_now)
     
     # OAuth関連
     auth_provider = Column(String, nullable=True)  # "google", "line", "email"
@@ -28,9 +34,9 @@ class User(Base):
     stripe_customer_id = Column(String, nullable=True)
     stripe_subscription_id = Column(String, nullable=True)
     
-    # メタデータ
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    # メタデータ（日本時間で保存）
+    created_at = Column(DateTime, default=jst_now)
+    updated_at = Column(DateTime, default=jst_now, onupdate=jst_now)
     
     # リレーション
     # meetings = relationship("Meeting", back_populates="user")  # 一時的にコメントアウト
