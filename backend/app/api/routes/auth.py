@@ -62,9 +62,11 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
         
         # ユーザーを取得または作成
         user = db.query(User).filter(User.email == email).first()
+        is_new_user = False
         
         if not user:
             # 新規ユーザーを作成
+            is_new_user = True
             user = User(
                 email=email,
                 name=name,
@@ -94,6 +96,7 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
             data={
                 "access_token": access_token,
                 "token_type": "bearer",
+                "is_new_user": is_new_user,
                 "user": {
                     "id": user.id,
                     "email": user.email,
@@ -167,12 +170,14 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         
         # ユーザーを取得または作成
         user = db.query(User).filter(User.line_user_id == line_user_id).first()
+        is_new_user = False
         
         if not user:
             # LINEユーザーIDをメールアドレスとして使用（一意性のため）
             email = f"{line_user_id}@line.user"
             
             print(f"DEBUG: 新規LINEユーザー作成 - email: {email}, name: {name}")
+            is_new_user = True
             
             user = User(
                 email=email,
@@ -197,14 +202,13 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         # アクセストークンを生成
         access_token = create_access_token(data={"sub": str(user.id)})
         
-        print(f"DEBUG: LINE認証成功 - ユーザー: {user.email}")
-        
         return AuthResponse(
             success=True,
             message="LINE認証が成功しました",
             data={
                 "access_token": access_token,
                 "token_type": "bearer",
+                "is_new_user": is_new_user,
                 "user": {
                     "id": user.id,
                     "email": user.email,

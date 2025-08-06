@@ -26,6 +26,7 @@ const History: React.FC = () => {
   const [summary, setSummary] = useState<string>('')
   const [showSummary, setShowSummary] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
     const fetchMeetings = async () => {
@@ -33,6 +34,11 @@ const History: React.FC = () => {
         const response = await recordingService.getRecordingList()
         if (response.data && response.data.meetings) {
           setMeetings(response.data.meetings)
+          
+          // 新規ユーザーかどうかを判定（履歴が0件の場合）
+          if (response.data.meetings.length === 0) {
+            setIsNewUser(true)
+          }
         }
       } catch (error) {
         console.error('履歴取得エラー:', error)
@@ -59,48 +65,21 @@ const History: React.FC = () => {
   }
 
   const handleExport = async (meetingId: number, format: 'pdf' | 'docx') => {
+    setExporting(true)
     try {
-      setExporting(true)
-      
-      // エクスポートファイルを生成
       const response = await recordingService.exportSummary(meetingId, format)
-      
-      if (response.success && response.data && response.data.filename) {
-        // 認証トークンを取得
-        const token = localStorage.getItem('access_token')
-        
-        // 認証ヘッダー付きでファイルをダウンロード
-        const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'}/api/summary/download/${response.data.filename}`
-        
-        const downloadResponse = await fetch(downloadUrl, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (downloadResponse.ok) {
-          const blob = await downloadResponse.blob()
-          const url = window.URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = response.data.filename
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          window.URL.revokeObjectURL(url)
-          
-          alert(`${format.toUpperCase()}ファイルをダウンロードしました`)
-        } else {
-          throw new Error('ダウンロードに失敗しました')
-        }
+      if (response.data && response.data.download_url) {
+        // ファイルをダウンロード
+        const link = document.createElement('a')
+        link.href = response.data.download_url
+        link.download = response.data.filename || `meeting_${meetingId}.${format}`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('エクスポートエラー:', error)
-      if (error.response?.status === 402) {
-        alert('エクスポート機能はプレミアムプランのみ利用可能です')
-      } else {
-        alert('エクスポートに失敗しました')
-      }
+      alert('エクスポートに失敗しました')
     } finally {
       setExporting(false)
     }
@@ -185,7 +164,21 @@ const History: React.FC = () => {
         <p>過去の議事録を確認・ダウンロードできます</p>
       </div>
 
-      {meetings.length === 0 ? (
+      {isNewUser ? (
+        <div className="new-user-welcome">
+          <div className="welcome-icon">🎉</div>
+          <h2>ようこそ！</h2>
+          <p>初回ログインですね。録音を開始して、最初の議事録を作成しましょう。</p>
+          <div className="welcome-actions">
+            <button 
+              onClick={() => window.location.href = '/recording'}
+              className="welcome-btn"
+            >
+              🎤 録音を開始する
+            </button>
+          </div>
+        </div>
+      ) : meetings.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📝</div>
           <h2>議事録がありません</h2>
