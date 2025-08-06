@@ -27,11 +27,44 @@ def validate_email(email: str) -> bool:
     # 架空のドメインをチェック
     suspicious_domains = [
         'example.com', 'test.com', 'fake.com', 'dummy.com', 'temp.com',
-        'localhost', '127.0.0.1', '0.0.0.0', 'invalid.com', 'nonexistent.com'
+        'localhost', '127.0.0.1', '0.0.0.0', 'invalid.com', 'nonexistent.com',
+        'anstuma.com', 'anstuma.net', 'anstuma.org', 'anstuma.info',
+        'test.org', 'test.net', 'test.info', 'test.biz',
+        'fake.org', 'fake.net', 'fake.info', 'fake.biz',
+        'dummy.org', 'dummy.net', 'dummy.info', 'dummy.biz',
+        'temp.org', 'temp.net', 'temp.info', 'temp.biz',
+        'example.org', 'example.net', 'example.info', 'example.biz',
+        'localhost.com', 'localhost.net', 'localhost.org',
+        '127.0.0.1.com', '127.0.0.1.net', '127.0.0.1.org',
+        '0.0.0.0.com', '0.0.0.0.net', '0.0.0.0.org',
+        'invalid.org', 'invalid.net', 'invalid.info', 'invalid.biz',
+        'nonexistent.org', 'nonexistent.net', 'nonexistent.info', 'nonexistent.biz'
     ]
     
     domain = email.split('@')[1].lower()
     if domain in suspicious_domains:
+        print(f"DEBUG: 架空ドメイン検出: {domain}")
+        return False
+    
+    # 一般的なメールプロバイダーのみを許可
+    allowed_domains = [
+        'gmail.com', 'yahoo.co.jp', 'yahoo.com', 'outlook.com', 'hotmail.com',
+        'icloud.com', 'me.com', 'mac.com', 'live.com', 'msn.com',
+        'docomo.ne.jp', 'ezweb.ne.jp', 'softbank.ne.jp', 'au.com',
+        'nifty.com', 'biglobe.ne.jp', 'so-net.ne.jp', 'asahi-net.or.jp',
+        'jcom.home.ne.jp', 'kddi.com', 'ntt.com', 'nttdocomo.co.jp',
+        'rakuten.com', 'yahoo.co.jp', 'goo.ne.jp', 'infoseek.jp',
+        'livedoor.com', 'excite.co.jp', 'mopera.net', 'pdx.ne.jp',
+        'i.softbank.jp', 'disney.ne.jp', 'ezweb.ne.jp', 'au.com',
+        'docomo.ne.jp', 'softbank.ne.jp', 'nifty.com', 'biglobe.ne.jp',
+        'so-net.ne.jp', 'asahi-net.or.jp', 'jcom.home.ne.jp', 'kddi.com',
+        'ntt.com', 'nttdocomo.co.jp', 'rakuten.com', 'goo.ne.jp',
+        'infoseek.jp', 'livedoor.com', 'excite.co.jp', 'mopera.net',
+        'pdx.ne.jp', 'i.softbank.jp', 'disney.ne.jp'
+    ]
+    
+    if domain not in allowed_domains:
+        print(f"DEBUG: 許可されていないドメイン: {domain}")
         return False
     
     return True

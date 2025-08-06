@@ -12,12 +12,20 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     print(f"DEBUG: get_current_user 開始 - トークン長さ: {len(token) if token else 0}")
     
     try:
-        # トークンを検証してユーザーIDを取得
-        user_id = verify_token(token)
-        if not user_id:
+        # トークンを検証してペイロードを取得
+        payload = verify_token(token)
+        if not payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="無効なトークンです"
+            )
+        
+        # ペイロードからユーザーIDを取得
+        user_id = int(payload.get("sub"))
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="トークンにユーザー情報が含まれていません"
             )
         
         # データベースからユーザーを取得
