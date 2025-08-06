@@ -31,13 +31,22 @@ const History: React.FC = () => {
   useEffect(() => {
     const fetchMeetings = async () => {
       try {
+        console.log('DEBUG: 履歴取得開始 - ユーザーID:', user?.id)
+        console.log('DEBUG: 新規ユーザーフラグ:', isNewUser)
+        
         const response = await recordingService.getRecordingList()
+        console.log('DEBUG: 履歴取得レスポンス:', response)
+        
         if (response.data && response.data.meetings) {
           setMeetings(response.data.meetings)
+          console.log('DEBUG: 取得した履歴数:', response.data.meetings.length)
           
           // 新規ユーザーかどうかを判定（AuthContextのフラグと履歴が0件の場合）
           if (isNewUser || response.data.meetings.length === 0) {
             setShowNewUserMessage(true)
+            console.log('DEBUG: 新規ユーザーメッセージを表示')
+          } else {
+            console.log('DEBUG: 既存ユーザーとして履歴を表示')
           }
         }
       } catch (error) {
@@ -48,7 +57,7 @@ const History: React.FC = () => {
     }
 
     fetchMeetings()
-  }, [isNewUser])
+  }, [isNewUser, user?.id])
 
   const handleViewSummary = async (meetingId: number) => {
     try {

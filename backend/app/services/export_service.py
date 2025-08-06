@@ -14,7 +14,7 @@ from app.models.meeting import Meeting
 
 class ExportService:
     def __init__(self):
-        self.export_dir = "exports"
+        self.export_dir = os.path.join("uploads", "exports")
         os.makedirs(self.export_dir, exist_ok=True)
     
     def jst_now(self):
