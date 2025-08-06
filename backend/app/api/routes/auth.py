@@ -40,18 +40,18 @@ def get_email_validation_error(email: str) -> str:
     # 基本的なメールアドレス形式の検証
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(pattern, email):
-        return "メールアドレスの形式が正しくありません"
+        return "このメールアドレスは使用できません。正しいメールアドレスを入力してください。"
     
     # 短すぎるユーザー名（2文字未満）を拒否
     username = email.split('@')[0]
     if len(username) < 2:
-        return "メールアドレスのユーザー名が短すぎます（2文字以上必要）"
+        return "このメールアドレスは使用できません。メールアドレスの@より前の部分が短すぎます。"
     
     # 数字のみのユーザー名を拒否
     if username.isdigit():
-        return "数字のみのメールアドレスは使用できません"
+        return "このメールアドレスは使用できません。数字のみのメールアドレスは使用できません。"
     
-    return "無効なメールアドレスです"
+    return "このメールアドレスは使用できません。別のメールアドレスをお試しください。"
 
 class GoogleAuthRequest(BaseModel):
     id_token: str

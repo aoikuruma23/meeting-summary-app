@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     if (!newToken) {
       console.error('DEBUG: トークンがundefinedです')
-      throw new Error('認証トークンが取得できませんでした')
+      throw new Error('このメールアドレスでは登録できません。別のメールアドレスをお試しください。')
     }
     
     setToken(newToken)
