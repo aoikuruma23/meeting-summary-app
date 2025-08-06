@@ -66,41 +66,216 @@ const Home: React.FC = () => {
   if (!user) {
     return (
       <div className="home-container">
-        <div className="welcome-section">
-          <h1>🎤 議事録要約Webアプリ</h1>
-          <p className="subtitle">会議音声を自動で文字起こし・要約</p>
-          <p className="description">
-            簡単な操作で会議の録音から要約まで自動化。<br />
-            誰でも簡単に使える議事録作成ツールです。
-          </p>
-          <Link to="/login" className="cta-button">
-            🚀 ログインして開始
-          </Link>
+        {/* ヒーローセクション */}
+        <div className="hero-section">
+          <div className="hero-content">
+            <h1 className="hero-title">
+              🎤 AI議事録アシスタント
+            </h1>
+            <p className="hero-subtitle">
+              会議音声を自動で文字起こし・要約
+            </p>
+            <p className="hero-description">
+              面倒な議事録作成を自動化。会議に集中して、<br />
+              重要なポイントを逃さず記録できます。
+            </p>
+            <div className="hero-actions">
+              <Link to="/login" className="cta-button primary">
+                🚀 無料で始める
+              </Link>
+              <Link to="/help" className="cta-button secondary">
+                📖 使い方を確認
+              </Link>
+            </div>
+          </div>
+          <div className="hero-stats">
+            <div className="stat-item">
+              <span className="stat-number">99%</span>
+              <span className="stat-label">精度</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">2時間</span>
+              <span className="stat-label">最大録音時間</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">5分</span>
+              <span className="stat-label">処理時間</span>
+            </div>
+          </div>
         </div>
-        
+
+        {/* 機能紹介セクション */}
         <div className="features-section">
-          <h2>✨ 主な機能</h2>
+          <h2 className="section-title">✨ 主な機能</h2>
           <div className="features-grid">
             <div className="feature-card">
               <div className="feature-icon">🎤</div>
-              <h3>簡単録音</h3>
-              <p>ワンクリック録音開始。安定した処理</p>
+              <h3>ワンクリック録音</h3>
+              <p>ブラウザ上で簡単録音。リアルタイムで音声を処理し、高品質な文字起こしを実現します。</p>
+              <ul className="feature-details">
+                <li>ブラウザ標準API使用</li>
+                <li>リアルタイム処理</li>
+                <li>自動チャンク分割</li>
+              </ul>
             </div>
             <div className="feature-card">
               <div className="feature-icon">🤖</div>
               <h3>AI文字起こし</h3>
-              <p>AI活用で高精度な日本語文字起こし</p>
+              <p>OpenAI Whisperによる高精度な日本語音声認識。専門用語や人名も正確に認識します。</p>
+              <ul className="feature-details">
+                <li>OpenAI Whisper使用</li>
+                <li>日本語対応</li>
+                <li>専門用語対応</li>
+              </ul>
             </div>
             <div className="feature-card">
               <div className="feature-icon">📝</div>
-              <h3>自動要約</h3>
-              <p>AIで議事録を自動要約。アクションアイテムも抽出</p>
+              <h3>AI自動要約</h3>
+              <p>ChatGPTによる高度な要約機能。重要なポイント、アクションアイテム、決定事項を自動抽出。</p>
+              <ul className="feature-details">
+                <li>ChatGPT 4.0使用</li>
+                <li>構造化要約</li>
+                <li>アクション抽出</li>
+              </ul>
             </div>
             <div className="feature-card">
               <div className="feature-icon">📁</div>
-              <h3>履歴管理</h3>
-              <p>過去の議事録を簡単に確認・ダウンロード</p>
+              <h3>履歴管理・エクスポート</h3>
+              <p>過去の議事録を簡単に確認。PDF・Word形式でエクスポート可能。共有も簡単です。</p>
+              <ul className="feature-details">
+                <li>PDF/Word出力</li>
+                <li>検索機能</li>
+                <li>共有機能</li>
+              </ul>
             </div>
+          </div>
+        </div>
+
+        {/* 使用例セクション */}
+        <div className="use-cases-section">
+          <h2 className="section-title">💼 活用シーン</h2>
+          <div className="use-cases-grid">
+            <div className="use-case-card">
+              <div className="use-case-icon">🏢</div>
+              <h3>企業会議</h3>
+              <p>取締役会、部門会議、プロジェクト会議など、様々な企業会議での議事録作成を効率化。</p>
+            </div>
+            <div className="use-case-card">
+              <div className="use-case-icon">🎓</div>
+              <h3>教育・研修</h3>
+              <p>セミナー、研修、講義の内容を記録。重要なポイントを逃さず学習できます。</p>
+            </div>
+            <div className="use-case-card">
+              <div className="use-case-icon">👥</div>
+              <h3>チームミーティング</h3>
+              <p>リモートワーク、ハイブリッド会議での議事録作成。参加者全員で情報共有。</p>
+            </div>
+            <div className="use-case-card">
+              <div className="use-case-icon">📊</div>
+              <h3>インタビュー・調査</h3>
+              <p>顧客インタビュー、市場調査、ユーザーリサーチの記録と分析。</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 料金プランセクション */}
+        <div className="pricing-section">
+          <h2 className="section-title">💰 料金プラン</h2>
+          <div className="pricing-grid">
+            <div className="pricing-card free">
+              <div className="pricing-header">
+                <h3>無料プラン</h3>
+                <div className="price">¥0</div>
+                <p className="price-period">/月</p>
+              </div>
+              <ul className="pricing-features">
+                <li>✅ 30分までの録音</li>
+                <li>✅ 月5回まで利用</li>
+                <li>✅ 基本的な要約機能</li>
+                <li>✅ 履歴保存</li>
+                <li>❌ エクスポート機能</li>
+                <li>❌ 優先サポート</li>
+              </ul>
+              <Link to="/login" className="pricing-button">
+                無料で始める
+              </Link>
+            </div>
+            <div className="pricing-card premium">
+              <div className="pricing-badge">人気</div>
+              <div className="pricing-header">
+                <h3>プレミアムプラン</h3>
+                <div className="price">¥1,980</div>
+                <p className="price-period">/月</p>
+              </div>
+              <ul className="pricing-features">
+                <li>✅ 2時間までの録音</li>
+                <li>✅ 無制限利用</li>
+                <li>✅ 高度な要約機能</li>
+                <li>✅ PDF/Wordエクスポート</li>
+                <li>✅ 優先サポート</li>
+                <li>✅ カスタム設定</li>
+              </ul>
+              <Link to="/login" className="pricing-button premium">
+                プレミアムにアップグレード
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* 技術仕様セクション */}
+        <div className="tech-specs-section">
+          <h2 className="section-title">🔧 技術仕様</h2>
+          <div className="tech-specs-grid">
+            <div className="tech-spec-card">
+              <h3>音声処理</h3>
+              <ul>
+                <li>フォーマット: WAV, MP3, OGG</li>
+                <li>サンプリングレート: 44.1kHz</li>
+                <li>ビット深度: 16bit</li>
+                <li>チャンクサイズ: 10MB</li>
+              </ul>
+            </div>
+            <div className="tech-spec-card">
+              <h3>AI技術</h3>
+              <ul>
+                <li>文字起こし: OpenAI Whisper</li>
+                <li>要約: OpenAI ChatGPT 4.0</li>
+                <li>言語: 日本語対応</li>
+                <li>精度: 99%以上</li>
+              </ul>
+            </div>
+            <div className="tech-spec-card">
+              <h3>セキュリティ</h3>
+              <ul>
+                <li>通信: HTTPS暗号化</li>
+                <li>データ: AES-256暗号化</li>
+                <li>認証: JWT + OAuth2.0</li>
+                <li>決済: Stripe標準</li>
+              </ul>
+            </div>
+            <div className="tech-spec-card">
+              <h3>対応環境</h3>
+              <ul>
+                <li>ブラウザ: Chrome, Firefox, Safari</li>
+                <li>OS: Windows, Mac, Linux</li>
+                <li>デバイス: PC, タブレット</li>
+                <li>ネットワーク: 安定したインターネット接続</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* CTAセクション */}
+        <div className="final-cta-section">
+          <h2>🚀 今すぐ始めましょう</h2>
+          <p>面倒な議事録作成から解放され、会議に集中できる環境を提供します。</p>
+          <div className="cta-actions">
+            <Link to="/login" className="cta-button primary large">
+              🎤 無料で録音開始
+            </Link>
+            <Link to="/help" className="cta-button secondary">
+              📖 詳細を見る
+            </Link>
           </div>
         </div>
       </div>
