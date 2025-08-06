@@ -1,63 +1,61 @@
 import os
-from datetime import datetime
+import json
+from datetime import datetime, timezone, timedelta
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from app.core.config import settings
+from app.models.meeting import Meeting
 
 class ExportService:
     def __init__(self):
-        self.export_dir = os.path.join(settings.UPLOAD_DIR, "exports")
+        self.export_dir = "exports"
         os.makedirs(self.export_dir, exist_ok=True)
-        print(f"DEBUG: エクスポートディレクトリ作成: {self.export_dir}")
     
-    def _create_japanese_font(self):
-        """日本語フォントを設定"""
-        try:
-            # 利用可能なフォントを確認
-            available_fonts = pdfmetrics.getRegisteredFontNames()
-            print(f"利用可能なフォント: {available_fonts}")
+    def jst_now(self):
+        """日本時間（JST）の現在時刻を返す"""
+        jst = timezone(timedelta(hours=9))
+        return datetime.now(jst)
+    
+    def format_jst_datetime(self, dt):
+        """日本時間でフォーマット"""
+        if dt:
+            # データベースの時間がUTCの場合、JSTに変換
+            if dt.tzinfo is None:
+                # タイムゾーン情報がない場合はUTCとして扱い、JSTに変換
+                utc_time = dt.replace(tzinfo=timezone.utc)
+                jst_time = utc_time.astimezone(timezone(timedelta(hours=9)))
+            else:
+                # 既にタイムゾーン情報がある場合はJSTに変換
+                jst_time = dt.astimezone(timezone(timedelta(hours=9)))
             
-            # UnicodeCIDFontを試行
-            try:
-                pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
-                print("UnicodeCIDFontを登録しました: HeiseiMin-W3")
-                return 'HeiseiMin-W3'
-            except Exception as e:
-                print(f"UnicodeCIDFont登録失敗: {str(e)}")
-                
-                try:
-                    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
-                    print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W5")
-                    return 'HeiseiKakuGo-W5'
-                except Exception as e:
-                    print(f"UnicodeCIDFont登録失敗: {str(e)}")
-                    
-                    try:
-                        pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W3'))
-                        print("UnicodeCIDFontを登録しました: HeiseiKakuGo-W3")
-                        return 'HeiseiKakuGo-W3'
-                    except Exception as e:
-                        print(f"UnicodeCIDFont登録失敗: {str(e)}")
-                        print("警告: 日本語フォントが利用できません。Helveticaを使用します。")
-                        return 'Helvetica'
-        except Exception as e:
-            print(f"フォント作成エラー: {str(e)}")
-            return 'Helvetica'
+            return jst_time.strftime('%Y年%m月%d日 %H:%M')
+        else:
+            # 現在時刻を使用
+            return self.jst_now().strftime('%Y年%m月%d日 %H:%M')
+    
+    def safe_text(self, text):
+        """テキストを安全に処理"""
+        if not text:
+            return ""
+        # 改行文字を削除
+        text = text.replace('\n', ' ')
+        # 特殊文字をエスケープ
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
+        return text
     
     async def export_to_pdf(self, meeting) -> str:
         """要約をPDF形式でエクスポート"""
         try:
             # ファイル名を生成
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = self.jst_now().strftime("%Y%m%d_%H%M%S")
             filename = f"meeting_{meeting.id}_{timestamp}.pdf"
             file_path = os.path.join(self.export_dir, filename)
             
@@ -65,67 +63,46 @@ class ExportService:
             doc = SimpleDocTemplate(file_path, pagesize=A4)
             story = []
             
-            # 日本語フォントを設定
-            font_name = self._create_japanese_font()
-            
-            # スタイルを設定
+            # スタイルを定義
             styles = getSampleStyleSheet()
-            
-            # カスタムスタイルの作成
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Heading1'],
-                fontName=font_name,
                 fontSize=18,
                 spaceAfter=30,
                 alignment=1  # 中央揃え
             )
-            
             heading_style = ParagraphStyle(
                 'CustomHeading',
                 parent=styles['Heading2'],
-                fontName=font_name,
                 fontSize=14,
-                spaceAfter=12,
-                spaceBefore=12
+                spaceAfter=12
             )
-            
             normal_style = ParagraphStyle(
                 'CustomNormal',
                 parent=styles['Normal'],
-                fontName=font_name,
-                fontSize=11,
-                spaceAfter=6,
-                leading=14
+                fontSize=10,
+                spaceAfter=6
             )
             
-            # 日本語テキストのエンコーディング処理
-            def safe_text(text):
-                """日本語テキストを安全に処理"""
-                try:
-                    # UTF-8でエンコードしてからデコード
-                    return text.encode('utf-8').decode('utf-8')
-                except:
-                    return text
-            
             # タイトルを追加
-            story.append(Paragraph(safe_text("議事録要約"), title_style))
+            story.append(Paragraph(self.safe_text("議事録要約"), title_style))
             story.append(Spacer(1, 20))
             
             # 会議情報を追加
-            story.append(Paragraph(safe_text(f"会議タイトル: {meeting.title}"), heading_style))
-            story.append(Paragraph(safe_text(f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}"), normal_style))
-            story.append(Paragraph(safe_text(f"議事録ID: {meeting.id}"), normal_style))
+            story.append(Paragraph(self.safe_text(f"会議タイトル: {meeting.title}"), heading_style))
+            story.append(Paragraph(self.safe_text(f"作成日時: {self.format_jst_datetime(meeting.created_at)}"), normal_style))
+            story.append(Paragraph(self.safe_text(f"議事録ID: {meeting.id}"), normal_style))
             story.append(Spacer(1, 20))
             
             # 要約内容を追加
-            story.append(Paragraph(safe_text("要約内容"), heading_style))
+            story.append(Paragraph(self.safe_text("要約内容"), heading_style))
             
             # 要約を段落に分割して追加
             paragraphs = meeting.summary.split('\n\n')
             for paragraph in paragraphs:
                 if paragraph.strip():
-                    story.append(Paragraph(safe_text(paragraph.strip()), normal_style))
+                    story.append(Paragraph(self.safe_text(paragraph.strip()), normal_style))
                     story.append(Spacer(1, 6))
             
             # PDFを生成
@@ -141,7 +118,7 @@ class ExportService:
         """要約をWord形式でエクスポート"""
         try:
             # ファイル名を生成
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = self.jst_now().strftime("%Y%m%d_%H%M%S")
             filename = f"meeting_{meeting.id}_{timestamp}.docx"
             file_path = os.path.join(self.export_dir, filename)
             
@@ -155,7 +132,7 @@ class ExportService:
             # 会議情報を追加
             doc.add_heading("会議情報", level=1)
             doc.add_paragraph(f"会議タイトル: {meeting.title}")
-            doc.add_paragraph(f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}")
+            doc.add_paragraph(f"作成日時: {self.format_jst_datetime(meeting.created_at)}")
             doc.add_paragraph(f"議事録ID: {meeting.id}")
             
             # 要約内容を追加
