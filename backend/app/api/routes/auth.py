@@ -1,11 +1,12 @@
 import os
 import requests
 import jwt
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
@@ -16,6 +17,25 @@ from app.utils.auth import create_access_token, get_current_user, get_password_h
 router = APIRouter()
 security = HTTPBearer()
 
+def validate_email(email: str) -> bool:
+    """メールアドレスの形式を検証"""
+    # 基本的なメールアドレス形式の検証
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        return False
+    
+    # 架空のドメインをチェック
+    suspicious_domains = [
+        'example.com', 'test.com', 'fake.com', 'dummy.com', 'temp.com',
+        'localhost', '127.0.0.1', '0.0.0.0', 'invalid.com', 'nonexistent.com'
+    ]
+    
+    domain = email.split('@')[1].lower()
+    if domain in suspicious_domains:
+        return False
+    
+    return True
+
 class GoogleAuthRequest(BaseModel):
     id_token: str
 
@@ -23,11 +43,11 @@ class LineAuthRequest(BaseModel):
     code: str
 
 class EmailLoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 class EmailRegisterRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     name: str
 
@@ -57,6 +77,10 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
         
         if not email:
             raise HTTPException(status_code=400, detail="Google email not found")
+        
+        # メールアドレスの形式を検証
+        if not validate_email(email):
+            raise HTTPException(status_code=400, detail="無効なメールアドレス形式です")
         
         print(f"DEBUG: Google認証成功 - email: {email}")
         
@@ -231,6 +255,10 @@ async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db))
     try:
         print(f"DEBUG: メールログイン開始 - email: {request.email}")
         
+        # メールアドレスの形式を検証
+        if not validate_email(request.email):
+            raise HTTPException(status_code=400, detail="無効なメールアドレス形式です")
+        
         # ユーザーを取得
         user = db.query(User).filter(User.email == request.email).first()
         
@@ -282,6 +310,10 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         if existing_user:
             raise HTTPException(status_code=400, detail="このメールアドレスは既に登録されています")
         
+        # メールアドレスの形式を検証
+        if not validate_email(request.email):
+            raise HTTPException(status_code=400, detail="無効なメールアドレス形式です")
+
         # パスワードをハッシュ化
         hashed_password = get_password_hash(request.password)
         

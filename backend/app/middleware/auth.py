@@ -8,29 +8,37 @@ from app.utils.auth import verify_token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """現在のユーザーを取得（一時的にダミーユーザーを返す）"""
+    """現在のユーザーを取得"""
     print(f"DEBUG: get_current_user 開始 - トークン長さ: {len(token) if token else 0}")
     
-    # 一時的にダミーユーザーを返す
-    class DummyUser:
-        id = 1
-        email = "yukihiro3million@gmail.com"
-        name = "Sato Yukihiro"
-        is_premium = "true"
-        username = "dummy_user"
-        is_active = "active"
-        usage_count = 0
-        trial_start_date = None
-        auth_provider = "google"
-        google_id = "dummy_google_id"
-        line_user_id = None
-        stripe_customer_id = None
-        stripe_subscription_id = None
-        created_at = None
-        updated_at = None
-    
-    print("DEBUG: ダミーユーザーを返します")
-    return DummyUser()
+    try:
+        # トークンを検証してユーザーIDを取得
+        user_id = verify_token(token)
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="無効なトークンです"
+            )
+        
+        # データベースからユーザーを取得
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="ユーザーが見つかりません"
+            )
+        
+        print(f"DEBUG: ユーザー取得成功 - ID: {user.id}, Email: {user.email}")
+        return user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"DEBUG: 認証エラー: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="認証に失敗しました"
+        )
 
 # 一時的に認証を無効化（テスト用）
 def get_current_user_dummy():

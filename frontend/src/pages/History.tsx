@@ -41,10 +41,13 @@ const History: React.FC = () => {
           setMeetings(response.data.meetings)
           console.log('DEBUG: 取得した履歴数:', response.data.meetings.length)
           
-          // 新規ユーザーかどうかを判定（AuthContextのフラグと履歴が0件の場合）
-          if (isNewUser || response.data.meetings.length === 0) {
+          // 新規ユーザーかどうかを判定（AuthContextのフラグを優先）
+          if (isNewUser) {
             setShowNewUserMessage(true)
-            console.log('DEBUG: 新規ユーザーメッセージを表示')
+            console.log('DEBUG: 新規ユーザーメッセージを表示（AuthContextフラグ）')
+          } else if (response.data.meetings.length === 0) {
+            setShowNewUserMessage(true)
+            console.log('DEBUG: 新規ユーザーメッセージを表示（履歴0件）')
           } else {
             console.log('DEBUG: 既存ユーザーとして履歴を表示')
           }
