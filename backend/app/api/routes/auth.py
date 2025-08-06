@@ -24,91 +24,15 @@ def validate_email(email: str) -> bool:
     if not re.match(pattern, email):
         return False
     
-    # 架空のドメインをチェック
-    suspicious_domains = [
-        'example.com', 'test.com', 'fake.com', 'dummy.com', 'temp.com',
-        'localhost', '127.0.0.1', '0.0.0.0', 'invalid.com', 'nonexistent.com',
-        'anstuma.com', 'anstuma.net', 'anstuma.org', 'anstuma.info',
-        'test.org', 'test.net', 'test.info', 'test.biz',
-        'fake.org', 'fake.net', 'fake.info', 'fake.biz',
-        'dummy.org', 'dummy.net', 'dummy.info', 'dummy.biz',
-        'temp.org', 'temp.net', 'temp.info', 'temp.biz',
-        'example.org', 'example.net', 'example.info', 'example.biz',
-        'localhost.com', 'localhost.net', 'localhost.org',
-        '127.0.0.1.com', '127.0.0.1.net', '127.0.0.1.org',
-        '0.0.0.0.com', '0.0.0.0.net', '0.0.0.0.org',
-        'invalid.org', 'invalid.net', 'invalid.info', 'invalid.biz',
-        'nonexistent.org', 'nonexistent.net', 'nonexistent.info', 'nonexistent.biz'
-    ]
-    
-    domain = email.split('@')[1].lower()
-    if domain in suspicious_domains:
-        print(f"DEBUG: 架空ドメイン検出: {domain}")
+    # 短すぎるユーザー名（2文字未満）を拒否
+    username = email.split('@')[0]
+    if len(username) < 2:
         return False
     
-    # 一般的なメールプロバイダーのみを許可
-    allowed_domains = [
-        'gmail.com', 'yahoo.co.jp', 'yahoo.com', 'outlook.com', 'hotmail.com',
-        'icloud.com', 'me.com', 'mac.com', 'live.com', 'msn.com',
-        'docomo.ne.jp', 'ezweb.ne.jp', 'softbank.ne.jp', 'au.com',
-        'nifty.com', 'biglobe.ne.jp', 'so-net.ne.jp', 'asahi-net.or.jp',
-        'jcom.home.ne.jp', 'kddi.com', 'ntt.com', 'nttdocomo.co.jp',
-        'rakuten.com', 'yahoo.co.jp', 'goo.ne.jp', 'infoseek.jp',
-        'livedoor.com', 'excite.co.jp', 'mopera.net', 'pdx.ne.jp',
-        'i.softbank.jp', 'disney.ne.jp', 'ezweb.ne.jp', 'au.com',
-        'docomo.ne.jp', 'softbank.ne.jp', 'nifty.com', 'biglobe.ne.jp',
-        'so-net.ne.jp', 'asahi-net.or.jp', 'jcom.home.ne.jp', 'kddi.com',
-        'ntt.com', 'nttdocomo.co.jp', 'rakuten.com', 'goo.ne.jp',
-        'infoseek.jp', 'livedoor.com', 'excite.co.jp', 'mopera.net',
-        'pdx.ne.jp', 'i.softbank.jp', 'disney.ne.jp'
-    ]
-    
-    if domain not in allowed_domains:
-        print(f"DEBUG: 許可されていないドメイン: {domain}")
-        return False
-    
-    # 架空のユーザー名をチェック
-    username = email.split('@')[0].lower()
-    
-    # 短すぎるユーザー名（3文字未満）
-    if len(username) < 3:
-        print(f"DEBUG: 短すぎるユーザー名: {username}")
-        return False
-    
-    # 架空のユーザー名パターン
-    suspicious_usernames = [
-        'test', 'fake', 'dummy', 'temp', 'admin', 'user', 'guest',
-        'demo', 'sample', 'example', 'anonymous', 'unknown', 'nobody',
-        'antasu', 'anstuma', 'testuser', 'fakeuser', 'dummyuser',
-        'tempuser', 'adminuser', 'guestuser', 'demouser', 'sampleuser',
-        'exampleuser', 'anonymoususer', 'unknownuser', 'nobodyuser',
-        'a', 'aa', 'aaa', 'ab', 'abc', 'abcd', 'abcde',
-        'q', 'qq', 'qqq', 'qqqq', 'qqqqq',
-        '1', '11', '111', '1111', '11111',
-        'x', 'xx', 'xxx', 'xxxx', 'xxxxx',
-        'z', 'zz', 'zzz', 'zzzz', 'zzzzz'
-    ]
-    
-    if username in suspicious_usernames:
-        print(f"DEBUG: 架空のユーザー名検出: {username}")
-        return False
-    
-    # 連続した文字や数字のパターン
-    if re.match(r'^(.)\1{2,}$', username):  # 同じ文字が3回以上連続
-        print(f"DEBUG: 不自然なユーザー名パターン: {username}")
-        return False
-    
-    # 数字のみのユーザー名
+    # 数字のみのユーザー名を拒否
     if username.isdigit():
-        print(f"DEBUG: 数字のみのユーザー名: {username}")
         return False
     
-    # 特殊文字のみのユーザー名
-    if re.match(r'^[._-]+$', username):
-        print(f"DEBUG: 特殊文字のみのユーザー名: {username}")
-        return False
-    
-    print(f"DEBUG: メールアドレス検証成功: {email}")
     return True
 
 class GoogleAuthRequest(BaseModel):
@@ -330,24 +254,26 @@ async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db))
     try:
         print(f"DEBUG: メールログイン開始 - email: {request.email}")
         
-        # メールアドレスの形式を検証
-        if not validate_email(request.email):
-            raise HTTPException(status_code=400, detail="無効なメールアドレス形式です")
-        
         # ユーザーを取得
         user = db.query(User).filter(User.email == request.email).first()
-        
         if not user:
-            raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
+            raise HTTPException(status_code=400, detail="メールアドレスまたはパスワードが正しくありません")
         
-        if not user.hashed_password:
-            raise HTTPException(status_code=401, detail="このアカウントはソーシャルログイン専用です")
+        # メール確認済みかチェック
+        if user.is_active != "active":
+            raise HTTPException(status_code=400, detail="メール確認が必要です")
         
         # パスワードを検証
         if not verify_password(request.password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="メールアドレスまたはパスワードが正しくありません")
+            raise HTTPException(status_code=400, detail="メールアドレスまたはパスワードが正しくありません")
         
-        print(f"DEBUG: メールログイン成功 - email: {user.email}")
+        # 無料プランの使用制限をチェック
+        if user.is_premium == "false":
+            # 無料プランは月10回まで
+            if user.usage_count >= 10:
+                raise HTTPException(status_code=400, detail="無料プランの利用回数上限に達しました。プレミアムプランにアップグレードしてください。")
+        
+        print(f"DEBUG: メールログイン成功 - email: {request.email}")
         
         # アクセストークンを生成
         access_token = create_access_token(data={"sub": str(user.id)})
@@ -363,7 +289,8 @@ async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db))
                     "email": user.email,
                     "name": user.name,
                     "profile_picture": user.profile_picture,
-                    "is_premium": user.is_premium
+                    "is_premium": user.is_premium,
+                    "usage_count": user.usage_count
                 }
             }
         )
@@ -396,13 +323,14 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         # パスワードをハッシュ化
         hashed_password = get_password_hash(request.password)
         
-        # 新規ユーザーを作成
+        # 新規ユーザーを作成（メール確認待ち状態）
         user = User(
             email=request.email,
             name=request.name,
             hashed_password=hashed_password,
             auth_provider="email",
-            is_premium="false"  # メール登録は無料プラン
+            is_premium="false",  # メール登録は無料プラン
+            is_active="pending"  # メール確認待ち
         )
         db.add(user)
         db.commit()
@@ -410,21 +338,20 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         
         print(f"DEBUG: メール登録成功 - ID: {user.id}")
         
-        # アクセストークンを生成
-        access_token = create_access_token(data={"sub": str(user.id)})
+        # メール確認トークンを生成（実際のメール送信は実装しない）
+        # 本番環境では実際のメール送信機能を実装する必要があります
         
         return AuthResponse(
             success=True,
-            message="登録が成功しました",
+            message="登録が成功しました。メール確認が必要です。",
             data={
-                "access_token": access_token,
-                "token_type": "bearer",
                 "user": {
                     "id": user.id,
                     "email": user.email,
                     "name": user.name,
                     "profile_picture": user.profile_picture,
-                    "is_premium": user.is_premium
+                    "is_premium": user.is_premium,
+                    "is_active": user.is_active
                 }
             }
         )
