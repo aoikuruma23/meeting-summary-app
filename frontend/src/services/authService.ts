@@ -26,6 +26,7 @@ export interface AuthResponse {
   data?: {
     access_token: string
     token_type: string
+    is_new_user?: boolean
     user: {
       id: number
       email: string

@@ -19,14 +19,14 @@ interface Meeting {
 }
 
 const History: React.FC = () => {
-  const { user } = useAuth()
+  const { user, isNewUser } = useAuth()
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
   // const [selectedMeeting, setSelectedMeeting] = useState<number | null>(null)
   const [summary, setSummary] = useState<string>('')
   const [showSummary, setShowSummary] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [isNewUser, setIsNewUser] = useState(false)
+  const [showNewUserMessage, setShowNewUserMessage] = useState(false)
 
   useEffect(() => {
     const fetchMeetings = async () => {
@@ -35,9 +35,9 @@ const History: React.FC = () => {
         if (response.data && response.data.meetings) {
           setMeetings(response.data.meetings)
           
-          // 新規ユーザーかどうかを判定（履歴が0件の場合）
-          if (response.data.meetings.length === 0) {
-            setIsNewUser(true)
+          // 新規ユーザーかどうかを判定（AuthContextのフラグと履歴が0件の場合）
+          if (isNewUser || response.data.meetings.length === 0) {
+            setShowNewUserMessage(true)
           }
         }
       } catch (error) {
@@ -48,7 +48,7 @@ const History: React.FC = () => {
     }
 
     fetchMeetings()
-  }, [])
+  }, [isNewUser])
 
   const handleViewSummary = async (meetingId: number) => {
     try {
@@ -164,7 +164,7 @@ const History: React.FC = () => {
         <p>過去の議事録を確認・ダウンロードできます</p>
       </div>
 
-      {isNewUser ? (
+      {showNewUserMessage ? (
         <div className="new-user-welcome">
           <div className="welcome-icon">🎉</div>
           <h2>ようこそ！</h2>

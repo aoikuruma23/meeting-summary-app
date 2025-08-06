@@ -21,7 +21,7 @@ const Home: React.FC = () => {
           const response = await authService.googleAuth(idToken)
           
           if (response.success && response.data) {
-            await login(response.data.access_token, response.data.user)
+            await login(response.data.access_token, response.data.user, response.data.is_new_user)
             window.history.replaceState({}, document.title, window.location.pathname)
             navigate('/')
           }

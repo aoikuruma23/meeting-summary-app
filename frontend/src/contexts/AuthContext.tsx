@@ -14,7 +14,8 @@ interface User {
 interface AuthContextType {
   user: User | null
   token: string | null
-  login: (token: string, userData: User) => Promise<void>
+  isNewUser: boolean
+  login: (token: string, userData: User, isNewUser?: boolean) => Promise<void>
   logout: () => void
   isLoading: boolean
 }
@@ -36,6 +37,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const [isNewUser, setIsNewUser] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -47,11 +49,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const response = await authService.getCurrentUser()
           if (response.success && response.data?.user) {
             setUser(response.data.user)
+            // 既存ユーザーは新規ユーザーではない
+            setIsNewUser(false)
           } else {
             // トークンが無効な場合は削除
             localStorage.removeItem('access_token')
             setToken(null)
             setUser(null)
+            setIsNewUser(false)
           }
         } catch (error) {
           console.error('認証エラー:', error)
@@ -59,6 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('access_token')
           setToken(null)
           setUser(null)
+          setIsNewUser(false)
         }
       }
       setIsLoading(false)
@@ -67,13 +73,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth()
   }, [])
 
-  const login = async (newToken: string, userData: User) => {
+  const login = async (newToken: string, userData: User, isNewUserFlag: boolean = false) => {
     console.log('DEBUG: ログイン処理開始 - トークン:', newToken.substring(0, 20) + '...')
     console.log('DEBUG: ユーザーデータ:', userData)
+    console.log('DEBUG: 新規ユーザーフラグ:', isNewUserFlag)
     
     setToken(newToken)
     localStorage.setItem('access_token', newToken)
     setUser(userData)
+    setIsNewUser(isNewUserFlag)
     
     console.log('DEBUG: ログイン処理完了')
   }
@@ -81,6 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null)
     setToken(null)
+    setIsNewUser(false)
     localStorage.removeItem('access_token')
     authService.logout()
   }
@@ -88,6 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     token,
+    isNewUser,
     login,
     logout,
     isLoading
