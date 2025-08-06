@@ -74,9 +74,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   const login = async (newToken: string, userData: User, isNewUserFlag: boolean = false) => {
-    console.log('DEBUG: ログイン処理開始 - トークン:', newToken.substring(0, 20) + '...')
+    console.log('DEBUG: ログイン処理開始 - トークン:', newToken ? newToken.substring(0, 20) + '...' : 'undefined')
     console.log('DEBUG: ユーザーデータ:', userData)
     console.log('DEBUG: 新規ユーザーフラグ:', isNewUserFlag)
+    
+    if (!newToken) {
+      console.error('DEBUG: トークンがundefinedです')
+      throw new Error('認証トークンが取得できませんでした')
+    }
     
     setToken(newToken)
     localStorage.setItem('access_token', newToken)

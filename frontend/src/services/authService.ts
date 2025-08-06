@@ -155,7 +155,9 @@ const authService = {
       console.error('DEBUG: メール登録APIエラー:', error)
       
       if (error.response?.status === 400) {
-        throw new Error('このメールアドレスは既に登録されています')
+        // バックエンドからのエラーメッセージを表示
+        const errorMessage = error.response?.data?.detail || '登録に失敗しました'
+        throw new Error(errorMessage)
       }
       throw new Error('登録に失敗しました')
     }

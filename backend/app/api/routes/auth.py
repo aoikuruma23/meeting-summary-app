@@ -35,6 +35,24 @@ def validate_email(email: str) -> bool:
     
     return True
 
+def get_email_validation_error(email: str) -> str:
+    """メールアドレスの検証エラーメッセージを取得"""
+    # 基本的なメールアドレス形式の検証
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        return "メールアドレスの形式が正しくありません"
+    
+    # 短すぎるユーザー名（2文字未満）を拒否
+    username = email.split('@')[0]
+    if len(username) < 2:
+        return "メールアドレスのユーザー名が短すぎます（2文字以上必要）"
+    
+    # 数字のみのユーザー名を拒否
+    if username.isdigit():
+        return "数字のみのメールアドレスは使用できません"
+    
+    return "無効なメールアドレスです"
+
 class GoogleAuthRequest(BaseModel):
     id_token: str
 
@@ -315,8 +333,9 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         # メールアドレスの形式を検証
         print(f"DEBUG: メール検証開始 - {request.email}")
         if not validate_email(request.email):
-            print(f"DEBUG: メール検証失敗 - {request.email}")
-            raise HTTPException(status_code=400, detail="無効なメールアドレス形式です")
+            error_message = get_email_validation_error(request.email)
+            print(f"DEBUG: メール検証失敗 - {request.email}: {error_message}")
+            raise HTTPException(status_code=400, detail=error_message)
         
         print(f"DEBUG: メール検証成功 - {request.email}")
 
