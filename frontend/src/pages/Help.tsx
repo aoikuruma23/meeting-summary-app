@@ -52,6 +52,29 @@ const Help: React.FC = () => {
             <li>利用規約の確認</li>
             <li>プライバシーポリシーの確認</li>
           </ul>
+          
+          <h3>お問い合わせ</h3>
+          <p>上記で解決しない場合は、以下の方法でお問い合わせください：</p>
+          <div className="contact-info">
+            <div className="contact-item">
+              <h4>📧 メール</h4>
+              <p>jibunkaikakulab@gmail.com</p>
+              <p>通常24時間以内に返信いたします</p>
+            </div>
+            <div className="contact-item">
+              <h4>💬 LINE</h4>
+              <p>@meeting-summary-app</p>
+              <p>リアルタイムでサポートを受けることができます</p>
+            </div>
+          </div>
+          
+          <h3>お問い合わせの際にご準備ください</h3>
+          <ul>
+            <li>お使いのブラウザ（Chrome、Firefox、Safari等）</li>
+            <li>発生している問題の詳細</li>
+            <li>エラーメッセージがある場合はその内容</li>
+            <li>問題が発生した手順</li>
+          </ul>
         </div>
       </div>
     </div>

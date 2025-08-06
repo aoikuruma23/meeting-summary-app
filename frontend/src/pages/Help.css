@@ -1,5 +1,5 @@
 .help-container {
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 20px;
   min-height: calc(100vh - 200px);
@@ -15,53 +15,115 @@
 .help-content {
   width: 100%;
   background: white;
-  border-radius: 10px;
-  padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
   position: relative;
   top: 0;
+  line-height: 1.8;
 }
 
 .help-content h1 {
-  color: #333;
+  color: #2c3e50;
   text-align: center;
   margin-bottom: 30px;
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: bold;
+  border-bottom: 3px solid #3498db;
+  padding-bottom: 15px;
 }
 
 .help-section {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border-left: 4px solid #3498db;
 }
 
 .help-section h2 {
-  color: #333;
-  border-bottom: 2px solid #007bff;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
   padding-bottom: 10px;
   margin-bottom: 20px;
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
 .help-section h3 {
-  color: #555;
+  color: #34495e;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.help-section h4 {
+  color: #2c3e50;
   margin-top: 20px;
   margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
 }
 
 .help-section p {
-  line-height: 1.6;
-  color: #666;
+  line-height: 1.8;
+  color: #2c3e50;
   margin-bottom: 15px;
+  font-size: 1rem;
 }
 
 .help-section ul {
-  margin-left: 20px;
-  margin-bottom: 15px;
+  margin-left: 25px;
+  margin-bottom: 20px;
+  padding-left: 0;
 }
 
 .help-section li {
-  margin-bottom: 8px;
-  line-height: 1.5;
+  margin-bottom: 12px;
+  line-height: 1.7;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.contact-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.contact-item {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.contact-item:hover {
+  transform: translateY(-3px);
+}
+
+.contact-item h4 {
+  color: #2c3e50;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.contact-item p {
+  color: #666;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.contact-item p:first-of-type {
+  color: #3498db;
+  font-weight: bold;
+  font-size: 1.1rem;
 }
 
 .help-item {
@@ -122,22 +184,26 @@
 }
 
 .back-button {
-  background: #6c757d;
+  background: #3498db;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
+  padding: 12px 25px;
+  border-radius: 8px;
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
-  margin-bottom: 20px;
-  transition: background-color 0.3s;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
   position: relative;
   top: 0;
+  font-weight: bold;
+  font-size: 1rem;
 }
 
 .back-button:hover {
-  background: #5a6268;
+  background: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
 }
 
 /* モバイル対応 */
@@ -168,6 +234,10 @@
   
   .help-item {
     padding: 0.8rem;
+  }
+  
+  .contact-info {
+    grid-template-columns: 1fr;
   }
 }
 
