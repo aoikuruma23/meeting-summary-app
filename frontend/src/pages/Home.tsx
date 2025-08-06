@@ -190,7 +190,8 @@ const Home: React.FC = () => {
               </div>
               <ul className="pricing-features">
                 <li>✅ 30分までの録音</li>
-                <li>✅ 月5回まで利用</li>
+                <li>✅ 31日＋翌月1日まで利用</li>
+                <li>✅ またはトータル10回まで利用</li>
                 <li>✅ 基本的な要約機能</li>
                 <li>✅ 履歴保存</li>
                 <li>❌ エクスポート機能</li>
@@ -204,7 +205,7 @@ const Home: React.FC = () => {
               <div className="pricing-badge">人気</div>
               <div className="pricing-header">
                 <h3>プレミアムプラン</h3>
-                <div className="price">¥1,980</div>
+                <div className="price">¥980</div>
                 <p className="price-period">/月</p>
               </div>
               <ul className="pricing-features">
