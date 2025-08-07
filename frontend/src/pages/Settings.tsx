@@ -5,15 +5,19 @@ import './Settings.css'
 const Settings: React.FC = () => {
   const { user } = useAuth()
   const [subscriptionStatus, _setSubscriptionStatus] = useState({
-    is_premium: false,
+    is_premium: user?.is_premium === 'true',
     trial_days_remaining: 0,
     usage_count: 0,
     free_usage_limit: 10
   })
 
   useEffect(() => {
-    // TODO: サブスクリプション状況を取得
-  }, [])
+    // ユーザーのプレミアム状態を更新
+    _setSubscriptionStatus(prev => ({
+      ...prev,
+      is_premium: user?.is_premium === 'true'
+    }))
+  }, [user?.is_premium])
 
   const handleUpgrade = async () => {
     try {

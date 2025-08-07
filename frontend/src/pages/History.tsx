@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { recordingService } from '../services/recordingService'
 import './History.css'
@@ -236,7 +237,7 @@ const History: React.FC = () => {
                   👁️ 要約を見る
                 </button>
                 
-                {user?.is_premium && meeting.status === 'completed' && (
+                {user?.is_premium === 'true' && meeting.status === 'completed' && (
                   <div className="export-buttons">
                     <button
                       onClick={() => handleExport(meeting.id, 'pdf')}
@@ -252,6 +253,15 @@ const History: React.FC = () => {
                     >
                       📝 Word
                     </button>
+                  </div>
+                )}
+                
+                {user?.is_premium !== 'true' && meeting.status === 'completed' && (
+                  <div className="premium-notice">
+                    <p>💎 プレミアム会員はPDF/Wordで出力できます</p>
+                    <Link to="/settings" className="upgrade-link">
+                      🚀 プレミアムにアップグレード
+                    </Link>
                   </div>
                 )}
               </div>

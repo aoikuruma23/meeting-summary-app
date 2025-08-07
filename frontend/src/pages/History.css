@@ -382,4 +382,38 @@
     padding: 1rem;
     padding-bottom: 5rem; /* モバイルでも最下段に余白を追加 */
   }
+}
+
+/* プレミアム通知スタイル */
+.premium-notice {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  border: 2px solid #ffc107;
+}
+
+.premium-notice p {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.upgrade-link {
+  display: inline-block;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.upgrade-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 } 
