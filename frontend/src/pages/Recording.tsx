@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useRecording } from '../contexts/RecordingContext'
+import { authService } from '../services/authService'
 import { recordingService } from '../services/recordingService'
 import './Recording.css'
 
 const Recording: React.FC = () => {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const { recordingState: _, startRecording, stopRecording, uploadChunk: __, resetRecording } = useRecording()
   const navigate = useNavigate()
   
@@ -175,6 +176,17 @@ const Recording: React.FC = () => {
       
       // 録音コンテキストをリセット
       resetRecording()
+      
+      // ユーザー情報を更新
+      try {
+        const response = await authService.getCurrentUser()
+        if (response.success && response.data?.user) {
+          updateUser(response.data.user)
+          console.log('ユーザー情報更新完了:', response.data.user)
+        }
+      } catch (error) {
+        console.error('ユーザー情報更新エラー:', error)
+      }
       
       // 履歴ページに遷移
       navigate('/history')

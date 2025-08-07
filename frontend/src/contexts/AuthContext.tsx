@@ -18,6 +18,7 @@ interface AuthContextType {
   isNewUser: boolean
   login: (token: string, userData: User, isNewUser?: boolean) => Promise<void>
   logout: () => void
+  updateUser: (userData: User) => void
   isLoading: boolean
 }
 
@@ -74,6 +75,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth()
   }, [])
 
+  // ユーザー情報を定期的に更新
+  useEffect(() => {
+    if (!token) return
+
+    const updateUserInfo = async () => {
+      try {
+        const response = await authService.getCurrentUser()
+        if (response.success && response.data?.user) {
+          setUser(response.data.user)
+        }
+      } catch (error) {
+        console.error('ユーザー情報更新エラー:', error)
+      }
+    }
+
+    // 初回更新
+    updateUserInfo()
+
+    // 5分ごとにユーザー情報を更新
+    const interval = setInterval(updateUserInfo, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [token])
+
   const login = async (newToken: string, userData: User, isNewUserFlag: boolean = false) => {
     console.log('DEBUG: ログイン処理開始 - トークン:', newToken ? newToken.substring(0, 20) + '...' : 'undefined')
     console.log('DEBUG: ユーザーデータ:', userData)
@@ -100,12 +125,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authService.logout()
   }
 
+  const updateUser = (userData: User) => {
+    setUser(userData)
+  }
+
   const value: AuthContextType = {
     user,
     token,
     isNewUser,
     login,
     logout,
+    updateUser,
     isLoading
   }
 

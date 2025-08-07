@@ -4,20 +4,36 @@ import './Settings.css'
 
 const Settings: React.FC = () => {
   const { user } = useAuth()
+  // 無料期間の残り日数を計算する関数
+  const calculateTrialDaysRemaining = (trialStartDate: string | undefined) => {
+    if (!trialStartDate || user?.is_premium === 'true') {
+      return 0
+    }
+    
+    const trialStart = new Date(trialStartDate)
+    const trialEnd = new Date(trialStart.getTime() + (31 * 24 * 60 * 60 * 1000)) // 31日後
+    const now = new Date()
+    const remaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+    
+    return Math.max(0, remaining)
+  }
+
   const [subscriptionStatus, _setSubscriptionStatus] = useState({
     is_premium: user?.is_premium === 'true',
-    trial_days_remaining: 0,
-    usage_count: 0,
+    trial_days_remaining: calculateTrialDaysRemaining(user?.trial_start_date),
+    usage_count: user?.usage_count || 0,
     free_usage_limit: 10
   })
 
   useEffect(() => {
-    // ユーザーのプレミアム状態を更新
+    // ユーザーの状態を更新
     _setSubscriptionStatus(prev => ({
       ...prev,
-      is_premium: user?.is_premium === 'true'
+      is_premium: user?.is_premium === 'true',
+      usage_count: user?.usage_count || 0,
+      trial_days_remaining: calculateTrialDaysRemaining(user?.trial_start_date)
     }))
-  }, [user?.is_premium])
+  }, [user?.is_premium, user?.usage_count, user?.trial_start_date])
 
   const handleUpgrade = async () => {
     try {
@@ -37,7 +53,7 @@ const Settings: React.FC = () => {
         <div className="account-info">
           <p><strong>名前:</strong> {user?.name}</p>
           <p><strong>メール:</strong> {user?.email}</p>
-          <p><strong>プラン:</strong> {user?.is_premium ? 'プレミアム' : '無料プラン'}</p>
+          <p><strong>プラン:</strong> {user?.is_premium === 'true' ? 'プレミアム' : '無料プラン'}</p>
         </div>
       </div>
       
