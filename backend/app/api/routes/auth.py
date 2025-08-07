@@ -12,6 +12,7 @@ from jose import JWTError, jwt
 from app.core.database import get_db
 from app.models.user import User
 from app.core.config import settings
+from app.middleware.auth import get_current_user
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -516,7 +517,7 @@ async def email_verify(request: EmailVerifyRequest, db: Session = Depends(get_db
     )
 
 @router.get("/me", response_model=AuthResponse)
-async def get_current_user_info(current_user: User = Depends(get_db().query(User).filter(User.id == verify_token(oauth2_scheme.tokenUrl)["sub"]).first())):
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """現在のユーザー情報を取得"""
     return AuthResponse(
         success=True,
@@ -527,7 +528,8 @@ async def get_current_user_info(current_user: User = Depends(get_db().query(User
                 "email": current_user.email,
                 "name": current_user.name,
                 "profile_picture": current_user.profile_picture,
-                "is_premium": current_user.is_premium
+                "is_premium": current_user.is_premium,
+                "is_active": current_user.is_active
             }
         }
     )
