@@ -62,8 +62,18 @@ def verify_password(plain_password: str, hashed_password: str):
 def validate_email_format(email: str) -> bool:
     """基本的なメール形式の検証"""
     try:
-        # PydanticのEmailStrで基本的な形式チェック
-        EmailStr.validate(email)
+        # 基本的なメール形式チェック（より緩やか）
+        if '@' not in email:
+            return False
+        
+        username, domain = email.split('@')
+        if not username or not domain:
+            return False
+        
+        # ドメインにドットが含まれているかチェック
+        if '.' not in domain:
+            return False
+        
         return True
     except:
         return False
