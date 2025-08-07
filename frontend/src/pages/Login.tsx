@@ -108,7 +108,7 @@ const Login: React.FC = () => {
         })
         
         if (response.success && response.data) {
-          await login(response.data.access_token, response.data.user)
+          await login(response.data.access_token!, response.data.user)
           navigate('/')
         }
       }

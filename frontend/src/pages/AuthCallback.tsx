@@ -52,7 +52,7 @@ const AuthCallback: React.FC = () => {
         console.log('DEBUG: Google認証APIを呼び出し');
         
         // Google認証APIを呼び出し
-        const response = await authService.googleAuth(token);
+        const response = await authService.googleAuth(token!);
         
         console.log('DEBUG: 認証APIレスポンス:', response);
         

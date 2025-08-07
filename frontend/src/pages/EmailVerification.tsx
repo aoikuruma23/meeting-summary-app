@@ -36,7 +36,7 @@ const EmailVerification: React.FC = () => {
       if (response.success && response.data) {
         setSuccess(true)
         // ログイン処理
-        await login(response.data.access_token, response.data.user)
+        await login(response.data.access_token!, response.data.user)
         setTimeout(() => {
           navigate('/')
         }, 2000)
