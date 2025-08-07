@@ -85,8 +85,20 @@ const Login: React.FC = () => {
         })
         
         if (response.success && response.data) {
-          await login(response.data.access_token, response.data.user)
-          navigate('/')
+          // メール確認が必要な場合の処理
+          if (response.data.user && response.data.user.is_active === 'pending') {
+            // メール確認ページにリダイレクト
+            navigate(`/email-verification?email=${encodeURIComponent(email)}`)
+            return
+          }
+          
+          // 通常のログイン処理（トークンがある場合）
+          if (response.data.access_token) {
+            await login(response.data.access_token, response.data.user)
+            navigate('/')
+          } else {
+            setError('登録が完了しました。メールボックスを確認してください。')
+          }
         }
       } else {
         // ログイン

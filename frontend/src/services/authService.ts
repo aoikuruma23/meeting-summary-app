@@ -24,8 +24,8 @@ export interface AuthResponse {
   success: boolean
   message: string
   data?: {
-    access_token: string
-    token_type: string
+    access_token?: string
+    token_type?: string
     is_new_user?: boolean
     user: {
       id: number
@@ -33,6 +33,7 @@ export interface AuthResponse {
       name: string
       profile_picture?: string
       is_premium: string
+      is_active?: string
     }
   }
 }
@@ -46,6 +47,11 @@ export interface EmailRegisterRequest {
   email: string
   password: string
   name: string
+}
+
+export interface EmailVerifyRequest {
+  email: string
+  verification_code: string
 }
 
 const authService = {
@@ -160,6 +166,26 @@ const authService = {
         throw new Error(errorMessage)
       }
       throw new Error('登録に失敗しました')
+    }
+  },
+
+  async emailVerify(request: EmailVerifyRequest): Promise<AuthResponse> {
+    try {
+      console.log('DEBUG: メール認証API呼び出し開始')
+      console.log('DEBUG: API URL:', `${API_BASE_URL}/api/auth/email/verify`)
+      
+      const response = await apiClient.post('/auth/email/verify', request)
+      console.log('DEBUG: メール認証APIレスポンス成功:', response.data)
+      
+      return response.data
+    } catch (error: any) {
+      console.error('DEBUG: メール認証APIエラー:', error)
+      
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.detail || '認証に失敗しました'
+        throw new Error(errorMessage)
+      }
+      throw new Error('認証に失敗しました')
     }
   },
 

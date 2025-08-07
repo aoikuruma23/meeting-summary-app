@@ -7,6 +7,7 @@ interface User {
   name: string
   profile_picture?: string
   is_premium: string
+  is_active?: string
   usage_count?: number
   trial_start_date?: string
 }
