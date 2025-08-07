@@ -57,7 +57,7 @@ const AuthCallback: React.FC = () => {
         console.log('DEBUG: 認証APIレスポンス:', response);
         
         if (response.success && response.data) {
-          await login(response.data.access_token, response.data.user);
+          await login(response.data.access_token!, response.data.user);
           navigate('/');
         } else {
           setError('認証に失敗しました。再度ログインしてください。');
