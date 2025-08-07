@@ -16,7 +16,9 @@ const Settings: React.FC = () => {
     // 例: 8月8日登録 → 8月8日+31日=9月8日 → 9月8日の翌月1日=10月1日
     const trialEnd = new Date(trialStart)
     trialEnd.setDate(trialEnd.getDate() + 31) // 31日後
-    trialEnd.setDate(1) // その日の翌月1日に設定
+    
+    // その日付の翌月1日を計算
+    trialEnd.setDate(1) // 1日に設定
     trialEnd.setMonth(trialEnd.getMonth() + 1) // 翌月に移動
     
     const now = new Date()

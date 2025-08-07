@@ -229,7 +229,8 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
                 profile_picture=picture,
                 auth_provider="google",
                 google_id=google_data.get("sub"), # Google IDを保存
-                is_premium="true"  # Googleユーザーもプレミアムとして設定
+                is_premium="true",  # Googleユーザーもプレミアムとして設定
+                trial_start_date=datetime.utcnow()  # 無料期間開始日を設定
             )
             db.add(user)
             db.commit()
@@ -258,7 +259,9 @@ async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db))
                     "email": user.email,
                     "name": user.name,
                     "profile_picture": user.profile_picture,
-                    "is_premium": user.is_premium
+                    "is_premium": user.is_premium,
+                    "trial_start_date": user.trial_start_date.isoformat() if user.trial_start_date else None,
+                    "usage_count": user.usage_count
                 }
             }
         )
@@ -341,7 +344,8 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
                 profile_picture=picture,
                 auth_provider="line",
                 line_user_id=line_user_id,
-                is_premium="true"  # LINEユーザーはプレミアムとして設定
+                is_premium="true",  # LINEユーザーはプレミアムとして設定
+                trial_start_date=datetime.utcnow()  # 無料期間開始日を設定
             )
             db.add(user)
             db.commit()
@@ -370,7 +374,9 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
                     "email": user.email,
                     "name": user.name,
                     "profile_picture": user.profile_picture,
-                    "is_premium": user.is_premium
+                    "is_premium": user.is_premium,
+                    "trial_start_date": user.trial_start_date.isoformat() if user.trial_start_date else None,
+                    "usage_count": user.usage_count
                 }
             }
         )
@@ -412,7 +418,9 @@ async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db))
                 "name": user.name,
                 "profile_picture": user.profile_picture,
                 "is_premium": user.is_premium,
-                "is_active": user.is_active
+                "is_active": user.is_active,
+                "trial_start_date": user.trial_start_date.isoformat() if user.trial_start_date else None,
+                "usage_count": user.usage_count
             }
         }
     )
@@ -442,7 +450,8 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         hashed_password=hashed_password,
         auth_provider="email",
         is_premium="false",
-        is_active="pending"  # メール確認待ち
+        is_active="pending",  # メール確認待ち
+        trial_start_date=datetime.utcnow()  # 無料期間開始日を設定
     )
     db.add(user)
     db.commit()
@@ -469,7 +478,9 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
                     "name": user.name,
                     "profile_picture": user.profile_picture,
                     "is_premium": user.is_premium,
-                    "is_active": user.is_active
+                    "is_active": user.is_active,
+                    "trial_start_date": user.trial_start_date.isoformat() if user.trial_start_date else None,
+                    "usage_count": user.usage_count
                 }
             }
         )
@@ -521,7 +532,9 @@ async def email_verify(request: EmailVerifyRequest, db: Session = Depends(get_db
                 "name": user.name,
                 "profile_picture": user.profile_picture,
                 "is_premium": user.is_premium,
-                "is_active": user.is_active
+                "is_active": user.is_active,
+                "trial_start_date": user.trial_start_date.isoformat() if user.trial_start_date else None,
+                "usage_count": user.usage_count
             }
         }
     )
@@ -539,7 +552,9 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
                 "name": current_user.name,
                 "profile_picture": current_user.profile_picture,
                 "is_premium": current_user.is_premium,
-                "is_active": current_user.is_active
+                "is_active": current_user.is_active,
+                "trial_start_date": current_user.trial_start_date.isoformat() if current_user.trial_start_date else None,
+                "usage_count": current_user.usage_count
             }
         }
     )
