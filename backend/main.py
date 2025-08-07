@@ -32,9 +32,17 @@ except Exception as e:
 app = FastAPI(title="Meeting Summary API", version="1.0.0")
 
 # CORS設定
+origins = [
+    "https://meeting-summary-app.jibunkaikaku-lab.com",
+    "https://meeting-summary-app-backend.jibunkaikaku-lab.com",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # 一時的にすべてのオリジンを許可
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
