@@ -2,6 +2,11 @@ import os
 import requests
 import jwt
 import re
+import secrets
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -17,6 +22,65 @@ from app.utils.auth import create_access_token, get_current_user, get_password_h
 router = APIRouter()
 security = HTTPBearer()
 
+# メール確認コードのストレージ（本番環境ではRedisを使用）
+verification_codes = {}
+
+def send_verification_email(email: str, code: str) -> bool:
+    """メール確認コードを送信"""
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+        
+        # SendGrid APIキーを環境変数から取得
+        sendgrid_api_key = os.getenv('SENDGRID_API_KEY')
+        if not sendgrid_api_key:
+            print("SENDGRID_API_KEYが設定されていません")
+            return False
+        
+        # メール内容を作成
+        message = Mail(
+            from_email='noreply@meeting-summary-app.com',
+            to_emails=email,
+            subject='メールアドレス確認',
+            html_content=f'''
+            <h2>メールアドレス確認</h2>
+            <p>以下の確認コードを入力してください：</p>
+            <h1 style="color: #007bff; font-size: 24px;">{code}</h1>
+            <p>このコードは10分間有効です。</p>
+            '''
+        )
+        
+        # SendGridでメール送信
+        sg = SendGridAPIClient(api_key=sendgrid_api_key)
+        response = sg.send(message)
+        
+        print(f"メール送信結果: {response.status_code}")
+        return response.status_code in [200, 201, 202]
+        
+    except Exception as e:
+        print(f"メール送信エラー: {str(e)}")
+        return False
+
+def test_email_delivery(email: str) -> bool:
+    """メールアドレスの配信可能性をテスト（実際のメール送信で確認）"""
+    try:
+        # テスト用の確認コードを生成
+        test_code = "123456"
+        
+        # 実際にメールを送信してテスト
+        success = send_verification_email(email, test_code)
+        
+        if success:
+            print(f"メール送信テスト成功: {email}")
+            return True
+        else:
+            print(f"メール送信テスト失敗: {email}")
+            return False
+            
+    except Exception as e:
+        print(f"メール配信テストエラー: {str(e)}")
+        return False
+
 def validate_email(email: str) -> bool:
     """メールアドレスの形式を検証"""
     # 基本的なメールアドレス形式の検証
@@ -31,6 +95,10 @@ def validate_email(email: str) -> bool:
     
     # 数字のみのユーザー名を拒否
     if username.isdigit():
+        return False
+    
+    # 実際のメール配信可能性をテスト
+    if not test_email_delivery(email):
         return False
     
     return True
@@ -50,6 +118,10 @@ def get_email_validation_error(email: str) -> str:
     # 数字のみのユーザー名を拒否
     if username.isdigit():
         return "このメールアドレスは使用できません。数字のみのメールアドレスは使用できません。"
+    
+    # 実際のメール配信可能性をテスト
+    if not test_email_delivery(email):
+        return "このメールアドレスは利用できません。"
     
     return "このメールアドレスは使用できません。別のメールアドレスをお試しください。"
 
@@ -353,21 +425,35 @@ async def email_register(request: EmailRegisterRequest, db: Session = Depends(ge
         
         print(f"DEBUG: メール登録成功 - ID: {user.id}")
         
-        # メール確認が必要なため、トークンは生成しない
-        return AuthResponse(
-            success=True,
-            message="登録が完了しました。メール確認が必要です。",
-            data={
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "profile_picture": user.profile_picture,
-                    "is_premium": user.is_premium,
-                    "is_active": user.is_active
+        # 確認コードを生成してメール送信
+        verification_code = ''.join(secrets.choice('0123456789') for _ in range(6))
+        verification_codes[request.email] = {
+            'code': verification_code,
+            'user_id': user.id,
+            'expires': datetime.utcnow() + timedelta(minutes=10)
+        }
+        
+        # 確認メールを送信
+        if send_verification_email(request.email, verification_code):
+            return AuthResponse(
+                success=True,
+                message="登録が完了しました。確認メールを送信しました。",
+                data={
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "name": user.name,
+                        "profile_picture": user.profile_picture,
+                        "is_premium": user.is_premium,
+                        "is_active": user.is_active
+                    }
                 }
-            }
-        )
+            )
+        else:
+            # メール送信に失敗した場合、ユーザーを削除
+            db.delete(user)
+            db.commit()
+            raise HTTPException(status_code=400, detail="メール送信に失敗しました。このメールアドレスは利用できません。")
         
     except HTTPException:
         raise
@@ -385,38 +471,48 @@ async def email_verify(request: dict, db: Session = Depends(get_db)):
         if not email or not verification_code:
             raise HTTPException(status_code=400, detail="メールアドレスと確認コードが必要です")
         
-        # ユーザーを取得
-        user = db.query(User).filter(User.email == email).first()
+        # 確認コードをチェック
+        if email not in verification_codes:
+            raise HTTPException(status_code=400, detail="確認コードが見つかりません")
+        
+        stored_data = verification_codes[email]
+        if stored_data['code'] != verification_code:
+            raise HTTPException(status_code=400, detail="確認コードが正しくありません")
+        
+        if datetime.utcnow() > stored_data['expires']:
+            del verification_codes[email]
+            raise HTTPException(status_code=400, detail="確認コードの有効期限が切れています")
+        
+        # ユーザーを取得してアクティブにする
+        user = db.query(User).filter(User.id == stored_data['user_id']).first()
         if not user:
             raise HTTPException(status_code=400, detail="ユーザーが見つかりません")
         
-        # メール確認コードを検証（簡易版）
-        # 本番環境では実際のメール送信とコード検証を実装
-        if verification_code == "123456":  # テスト用の固定コード
-            user.is_active = "active"
-            db.commit()
-            
-            # アクセストークンを生成
-            access_token = create_access_token(data={"sub": str(user.id)})
-            
-            return AuthResponse(
-                success=True,
-                message="メール確認が完了しました",
-                data={
-                    "access_token": access_token,
-                    "token_type": "bearer",
-                    "user": {
-                        "id": user.id,
-                        "email": user.email,
-                        "name": user.name,
-                        "profile_picture": user.profile_picture,
-                        "is_premium": user.is_premium,
-                        "is_active": user.is_active
-                    }
+        user.is_active = "active"
+        db.commit()
+        
+        # 確認コードを削除
+        del verification_codes[email]
+        
+        # アクセストークンを生成
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        return AuthResponse(
+            success=True,
+            message="メール確認が完了しました",
+            data={
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "profile_picture": user.profile_picture,
+                    "is_premium": user.is_premium,
+                    "is_active": user.is_active
                 }
-            )
-        else:
-            raise HTTPException(status_code=400, detail="確認コードが正しくありません")
+            }
+        )
         
     except HTTPException:
         raise
