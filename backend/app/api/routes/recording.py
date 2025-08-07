@@ -274,6 +274,12 @@ async def end_recording(
         
         # 要約処理を開始（非同期）
         recording_service = RecordingService()
+        
+        # 利用回数を先に増加（録音が完了した時点でカウント）
+        user.usage_count += 1
+        db.commit()
+        print(f"DEBUG: 利用回数を更新 - user_id: {user.id}, usage_count: {user.usage_count}")
+        
         try:
             # チャンクがアップロードされるまで少し待つ
             import asyncio
@@ -282,10 +288,6 @@ async def end_recording(
             print(f"DEBUG: 要約処理開始 - meeting_id: {request.meeting_id}")
             await recording_service.process_meeting(request.meeting_id, db)
             print(f"DEBUG: 要約処理完了 - meeting_id: {request.meeting_id}")
-            
-            # 利用回数を増加
-            user.usage_count += 1
-            db.commit()
             
             # ステータスを完了に変更
             meeting.status = "completed"
