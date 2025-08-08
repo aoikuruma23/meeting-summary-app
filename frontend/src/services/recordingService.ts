@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://meeting-summary-app-backend.onrender.com/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'https://meeting-summary-app-backend.jibunkaikaku-lab.com/api'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
