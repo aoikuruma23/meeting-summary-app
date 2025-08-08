@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'
 console.log('DEBUG: API_BASE_URL:', `${API_BASE_URL}/api`)
 console.log('DEBUG: VITE_API_URL:', import.meta.env.VITE_API_URL)
 
