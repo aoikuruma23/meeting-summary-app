@@ -35,6 +35,8 @@ app = FastAPI(title="Meeting Summary API", version="1.0.0")
 origins = [
     "https://meeting-summary-app.jibunkaikaku-lab.com",
     "https://meeting-summary-app-backend.jibunkaikaku-lab.com",
+    "https://meeting-summary-app.onrender.com",
+    "https://meeting-summary-app-backend.onrender.com",
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:8000",
@@ -42,7 +44,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 一時的にすべてのオリジンを許可
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
