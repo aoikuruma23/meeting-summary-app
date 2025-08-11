@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { RecordingProvider } from './contexts/RecordingContext'
 import Header from './components/Header'
@@ -18,30 +18,32 @@ import './App.css'
 
 function App() {
   return (
-    <AuthProvider>
-      <RecordingProvider>
-        <div className="App">
-          <Header />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/recording" element={<Recording />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/billing" element={<Billing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/help" element={<Help />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/email-verification" element={<EmailVerification />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </RecordingProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <RecordingProvider>
+          <div className="App">
+            <Header />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/recording" element={<Recording />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/billing" element={<Billing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/help" element={<Help />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/email-verification" element={<EmailVerification />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        </RecordingProvider>
+      </AuthProvider>
+    </Router>
   )
 }
 
-export default App 
+export default App
