@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -47,10 +47,12 @@ async def get_summary(
 @router.post("/export/{meeting_id}")
 async def export_summary(
     meeting_id: int,
-    format: str = "pdf",
+    request_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    # リクエストボディからformatを取得
+    format = request_data.get("format", "pdf")
     """要約をエクスポート"""
     try:
         # プレミアム権限チェック
@@ -73,6 +75,7 @@ async def export_summary(
         from app.services.export_service import ExportService
         export_service = ExportService()
         
+        print(f"DEBUG: リクエストボディ全体: {request_data}")
         print(f"DEBUG: エクスポート形式: {format}")
         print(f"DEBUG: エクスポート形式の型: {type(format)}")
         
