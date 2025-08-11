@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     # 機能設定
     DUMMY_LOGIN_ENABLED: str = "true"
     
+    # フロントエンド設定
+    VITE_API_URL: str = os.getenv("VITE_API_URL", "")
+    
     # Whisper設定
     WHISPER_MODEL: str = "base"
     

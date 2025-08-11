@@ -28,17 +28,30 @@ def run_migration():
         
         # 新しいカラムを追加
         try:
+            # 既存のカラムを確認
+            result = db.execute(text("PRAGMA table_info(users)"))
+            existing_columns = [row[1] for row in result.fetchall()]
+            
             # profile_pictureカラムを追加
-            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR"))
-            print("✓ profile_pictureカラムを追加しました")
+            if "profile_picture" not in existing_columns:
+                db.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR"))
+                print("✓ profile_pictureカラムを追加しました")
+            else:
+                print("ℹ profile_pictureカラムは既に存在します")
             
             # auth_providerカラムを追加
-            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR"))
-            print("✓ auth_providerカラムを追加しました")
+            if "auth_provider" not in existing_columns:
+                db.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR"))
+                print("✓ auth_providerカラムを追加しました")
+            else:
+                print("ℹ auth_providerカラムは既に存在します")
             
             # line_user_idカラムを追加
-            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS line_user_id VARCHAR"))
-            print("✓ line_user_idカラムを追加しました")
+            if "line_user_id" not in existing_columns:
+                db.execute(text("ALTER TABLE users ADD COLUMN line_user_id VARCHAR"))
+                print("✓ line_user_idカラムを追加しました")
+            else:
+                print("ℹ line_user_idカラムは既に存在します")
             
             # 既存のline_idカラムをline_user_idにリネーム（存在する場合）
             try:
