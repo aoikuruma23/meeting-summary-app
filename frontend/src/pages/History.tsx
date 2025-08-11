@@ -29,6 +29,12 @@ const History: React.FC = () => {
   const [exporting, setExporting] = useState(false)
   const [showNewUserMessage, setShowNewUserMessage] = useState(false)
 
+  // 環境変数の確認
+  useEffect(() => {
+    console.log('DEBUG: History - VITE_API_URL:', import.meta.env.VITE_API_URL)
+    console.log('DEBUG: History - 現在のAPI_BASE_URL:', import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com')
+  }, [])
+
   useEffect(() => {
     const fetchMeetings = async () => {
       try {
@@ -82,9 +88,17 @@ const History: React.FC = () => {
     try {
       const response = await recordingService.exportSummary(meetingId, format)
       if (response.data && response.data.download_url) {
+        // 相対パスを絶対URLに変換
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com'
+        const downloadUrl = response.data.download_url.startsWith('http') 
+          ? response.data.download_url 
+          : `${baseUrl}${response.data.download_url}`
+        
+        console.log('DEBUG: ダウンロードURL:', downloadUrl)
+        
         // ファイルをダウンロード
         const link = document.createElement('a')
-        link.href = response.data.download_url
+        link.href = downloadUrl
         link.download = response.data.filename || `meeting_${meetingId}.${format}`
         document.body.appendChild(link)
         link.click()
