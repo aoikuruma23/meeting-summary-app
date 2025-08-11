@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.onrender.com'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com'
 console.log('DEBUG: API_BASE_URL:', `${API_BASE_URL}/api`)
 console.log('DEBUG: VITE_API_URL:', import.meta.env.VITE_API_URL)
 
@@ -9,6 +9,9 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // CORSエラー対策
+  withCredentials: false,
+  timeout: 30000,
 })
 
 // リクエストインターセプターでトークンを追加
@@ -118,6 +121,21 @@ const authService = {
         url: error.config?.url,
         headers: error.response?.headers
       })
+      
+      // ネットワークエラーの場合
+      if (error.message === 'Network Error') {
+        throw new Error('ネットワークエラーが発生しました。バックエンドの接続を確認してください。')
+      }
+      
+      // CORSエラーの場合
+      if (error.code === 'ERR_NETWORK') {
+        throw new Error('CORSエラーが発生しました。バックエンドの設定を確認してください。')
+      }
+      
+      if (error.response?.status === 500) {
+        const errorDetail = error.response?.data?.detail || 'サーバー内部エラーが発生しました'
+        throw new Error(`LINE認証エラー: ${errorDetail}`)
+      }
       
       if (error.response?.status === 503) {
         throw new Error('LINE OAuth設定が完了していません。ダミーログインをご利用ください。')
