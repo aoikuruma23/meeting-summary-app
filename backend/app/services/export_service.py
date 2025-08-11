@@ -81,6 +81,82 @@ class ExportService:
                 except:
                     continue
             
+            if not available_font:
+                # 日本語フォントが見つからない場合、フォントファイルを直接埋め込む
+                print("日本語フォントが見つからないため、フォントファイルを埋め込みます")
+                try:
+                    # 複数の日本語フォントファイルを試行
+                    font_files = [
+                        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",  # Ubuntu
+                        "/usr/share/fonts/opentype/ipafont-gothic/IPAGothic.ttf",  # CentOS/RHEL
+                        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",  # macOS
+                        "/Library/Fonts/Arial Unicode MS.ttf",  # macOS
+                        "fonts/NotoSansCJK-Regular.ttc",  # カスタムフォント
+                        "fonts/NotoSansJP-Regular.otf"   # カスタムフォント
+                    ]
+                    
+                    font_registered = False
+                    for font_path in font_files:
+                        try:
+                            if os.path.exists(font_path):
+                                # フォントファイルを登録
+                                font_name = f"JapaneseFont_{os.path.basename(font_path)}"
+                                pdfmetrics.registerFont(TTFont(font_name, font_path))
+                                available_font = font_name
+                                font_registered = True
+                                print(f"日本語フォントファイルを埋め込みました: {font_path}")
+                                break
+                        except Exception as font_error:
+                            print(f"フォントファイル埋め込みエラー ({font_path}): {font_error}")
+                            continue
+                    
+                    if not font_registered:
+                        # システムフォントディレクトリを再帰的に検索
+                        print("システムフォントディレクトリを検索中...")
+                        system_font_dirs = [
+                            "/usr/share/fonts",
+                            "/usr/local/share/fonts",
+                            "/System/Library/Fonts",
+                            "/Library/Fonts",
+                            "/usr/X11/lib/X11/fonts"
+                        ]
+                        
+                        for font_dir in system_font_dirs:
+                            if os.path.exists(font_dir):
+                                try:
+                                    for root, dirs, files in os.walk(font_dir):
+                                        for file in files:
+                                            if file.lower().endswith(('.ttf', '.otf', '.ttc')):
+                                                font_path = os.path.join(root, file)
+                                                try:
+                                                    # 日本語フォントかどうかを判定（ファイル名に日本語が含まれているか）
+                                                    if any(char in file for char in ['japanese', 'japan', 'jp', 'gothic', 'mincho', 'ヒラギノ', 'メイリオ']):
+                                                        font_name = f"SystemFont_{os.path.basename(font_path)}"
+                                                        pdfmetrics.registerFont(TTFont(font_name, font_path))
+                                                        available_font = font_name
+                                                        font_registered = True
+                                                        print(f"システムフォントを発見・登録しました: {font_path}")
+                                                        break
+                                                except Exception as font_error:
+                                                    print(f"フォント登録エラー ({font_path}): {font_error}")
+                                                    continue
+                                        if font_registered:
+                                            break
+                                    if font_registered:
+                                        break
+                                except Exception as walk_error:
+                                    print(f"フォントディレクトリ検索エラー ({font_dir}): {walk_error}")
+                                    continue
+                    
+                    if not font_registered:
+                        # フォールバック: デフォルトフォントを使用
+                        available_font = 'Helvetica'
+                        print(f"日本語フォントの埋め込みに失敗したため、デフォルトフォントを使用: {available_font}")
+                        
+                except Exception as embed_error:
+                    print(f"フォント埋め込み処理エラー: {embed_error}")
+                    available_font = 'Helvetica'
+            
             if available_font:
                 # スタイルで日本語フォントを使用
                 self.japanese_font_name = available_font

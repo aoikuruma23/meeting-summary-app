@@ -3,7 +3,13 @@ services:
     name: meeting-summary-app-backend
     runtime: python
     repo: https://github.com/aoikuruma23/meeting-summary-app
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: |
+      # 日本語フォントのインストール
+      sudo apt-get update
+      sudo apt-get install -y fonts-ipafont fonts-ipafont-gothic fonts-ipafont-mincho fonts-noto-cjk fonts-noto-cjk-extra fonts-takao-gothic fonts-takao-mincho fonts-vlgothic fonts-umeplus
+      sudo fc-cache -fv
+      # Pythonパッケージのインストール
+      pip install -r backend/requirements.txt
     startCommand: cd backend && python main.py
     envVars:
       - key: PYTHON_VERSION
