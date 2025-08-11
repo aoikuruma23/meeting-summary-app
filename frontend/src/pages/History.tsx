@@ -20,7 +20,7 @@ interface Meeting {
 }
 
 const History: React.FC = () => {
-  const { user, isNewUser } = useAuth()
+  const { user, isNewUser, token } = useAuth()
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
   // const [selectedMeeting, setSelectedMeeting] = useState<number | null>(null)
@@ -96,13 +96,39 @@ const History: React.FC = () => {
         
         console.log('DEBUG: ダウンロードURL:', downloadUrl)
         
-        // ファイルをダウンロード
-        const link = document.createElement('a')
-        link.href = downloadUrl
-        link.download = response.data.filename || `meeting_${meetingId}.${format}`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        // 認証付きでファイルを取得してダウンロード
+        try {
+          if (!token) {
+            throw new Error('認証トークンがありません')
+          }
+          
+          const fileResponse = await fetch(downloadUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/octet-stream'
+            }
+          })
+          
+          if (!fileResponse.ok) {
+            throw new Error(`ファイル取得エラー: ${fileResponse.status} ${fileResponse.statusText}`)
+          }
+          
+          const blob = await fileResponse.blob()
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = response.data.filename || `meeting_${meetingId}.${format}`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+          
+          console.log('DEBUG: ファイルダウンロード完了')
+        } catch (downloadError) {
+          console.error('ダウンロードエラー:', downloadError)
+          alert('ファイルのダウンロードに失敗しました')
+        }
       }
     } catch (error) {
       console.error('エクスポートエラー:', error)
