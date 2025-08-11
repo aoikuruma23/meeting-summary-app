@@ -10,30 +10,48 @@ const Home: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
-    // Google認証のコールバック処理
+    console.log('DEBUG: Home useEffect 実行開始')
+    
+    // 認証処理が既に実行されたかどうかを追跡
+    let hasProcessed = false
+    
     const handleGoogleAuth = async () => {
+      if (isProcessing || hasProcessed) {
+        console.log('DEBUG: Google認証スキップ - isProcessing:', isProcessing, 'hasProcessed:', hasProcessed)
+        return // 処理中または既に処理済みの場合は何もしない
+      }
+      
       try {
-        const hash = window.location.hash
-        if (hash && hash.includes('id_token')) {
+        const urlParams = new URLSearchParams(window.location.search)
+        const idToken = urlParams.get('id_token')
+        
+        if (idToken) {
           console.log('DEBUG: Google認証トークンを検出')
-          const idToken = hash.split('id_token=')[1].split('&')[0]
+          hasProcessed = true // 処理済みフラグを設定
+          setIsProcessing(true)
           
           const response = await authService.googleAuth(idToken)
           
           if (response.success && response.data) {
-            await login(response.data.access_token!, response.data.user, response.data.is_new_user || false)
+            await login(response.data.access_token!, response.data.user)
             window.history.replaceState({}, document.title, window.location.pathname)
             navigate('/')
           }
         }
       } catch (error) {
         console.error('Google認証エラー:', error)
+        // エラーメッセージをユーザーに表示
+        alert('Google認証に失敗しました。再度ログインしてください。')
+      } finally {
+        setIsProcessing(false)
       }
     }
 
-    // LINE認証のコールバック処理
     const handleLineAuth = async () => {
-      if (isProcessing) return // 処理中の場合は何もしない
+      if (isProcessing || hasProcessed) {
+        console.log('DEBUG: LINE認証スキップ - isProcessing:', isProcessing, 'hasProcessed:', hasProcessed)
+        return // 処理中または既に処理済みの場合は何もしない
+      }
       
       try {
         const urlParams = new URLSearchParams(window.location.search)
@@ -42,6 +60,7 @@ const Home: React.FC = () => {
         
         if (code && state === 'line') {
           console.log('DEBUG: LINE認証コードを検出')
+          hasProcessed = true // 処理済みフラグを設定
           setIsProcessing(true)
           
           const response = await authService.lineAuth(code)
@@ -52,16 +71,38 @@ const Home: React.FC = () => {
             navigate('/')
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('LINE認証エラー:', error)
+        // エラーメッセージをユーザーに表示
+        const errorMessage = error.message || 'LINE認証に失敗しました'
+        alert(errorMessage)
+        
+        // 認証失敗時はURLパラメータをクリア
+        window.history.replaceState({}, document.title, window.location.pathname)
       } finally {
         setIsProcessing(false)
       }
     }
 
-    handleGoogleAuth()
-    handleLineAuth()
-  }, [login, navigate, isProcessing])
+    // 認証コードが存在する場合のみ処理を実行
+    const urlParams = new URLSearchParams(window.location.search)
+    const hasGoogleToken = urlParams.get('id_token')
+    const hasLineCode = urlParams.get('code') && urlParams.get('state') === 'line'
+    
+    console.log('DEBUG: 認証パラメータ確認 - hasGoogleToken:', !!hasGoogleToken, 'hasLineCode:', !!hasLineCode)
+    
+    if (hasGoogleToken) {
+      console.log('DEBUG: Google認証処理開始')
+      handleGoogleAuth()
+    } else if (hasLineCode) {
+      console.log('DEBUG: LINE認証処理開始')
+      handleLineAuth()
+    } else {
+      console.log('DEBUG: 認証パラメータなし - 処理スキップ')
+    }
+    
+    console.log('DEBUG: Home useEffect 実行完了')
+  }, []) // 依存配列を空にして、マウント時のみ実行
 
   if (!user) {
     return (
