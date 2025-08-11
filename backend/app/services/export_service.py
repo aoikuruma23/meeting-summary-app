@@ -193,7 +193,8 @@ class ExportService:
                         
                 except Exception as embed_error:
                     print(f"フォント埋め込み処理エラー: {embed_error}")
-                    available_font = 'Helvetica'
+                    # エラーを再発生させて、PDF生成を中止
+                    raise embed_error
             
             if available_font:
                 # スタイルで日本語フォントを使用
@@ -209,6 +210,7 @@ class ExportService:
         except Exception as e:
             print(f"日本語フォント設定エラー: {e}")
             print("エラー: 日本語フォントの設定に失敗しました。PDFの日本語表示ができません。")
+            # エラーを確実に発生させて、PDF生成を中止
             raise Exception(f"日本語フォントの設定に失敗しました: {str(e)}")
         
         # フォント設定の最終確認
@@ -255,6 +257,13 @@ class ExportService:
         """要約をPDF形式でエクスポート"""
         try:
             print(f"DEBUG: PDFエクスポート開始 - meeting_id: {meeting.id}")
+            
+            # 日本語フォントの再確認
+            if self.japanese_font_name == 'Helvetica':
+                print("エラー: 日本語フォントが利用できません。PDFの日本語表示ができません。")
+                raise Exception("日本語フォントが利用できません。PDFの日本語表示ができません。")
+            
+            print(f"DEBUG: 使用フォント確認: {self.japanese_font_name}")
             
             # ファイル名を生成
             timestamp = self.jst_now().strftime("%Y%m%d_%H%M%S")
