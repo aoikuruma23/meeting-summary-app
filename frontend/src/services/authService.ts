@@ -4,6 +4,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://meeting-summary-ap
 console.log('DEBUG: API_BASE_URL:', `${API_BASE_URL}/api`)
 console.log('DEBUG: VITE_API_URL:', import.meta.env.VITE_API_URL)
 
+// 使用済みのLINE認証コードを記録
+const usedLineCodes = new Set<string>()
+
 const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   headers: {
@@ -102,6 +105,12 @@ const authService = {
       console.log('DEBUG: コード内容（最初の10文字）:', code.substring(0, 10))
       console.log('DEBUG: API URL:', `${API_BASE_URL}/api/auth/line`)
       
+      // 既に使用済みのコードかチェック
+      if (usedLineCodes.has(code)) {
+        console.error('DEBUG: 既に使用済みのLINE認証コードです:', code)
+        throw new Error('このLINE認証コードは既に使用済みです。再度LINEログインを実行してください。')
+      }
+      
       const requestData = { code }
       console.log('DEBUG: リクエストデータ:', requestData)
       
@@ -109,6 +118,9 @@ const authService = {
       console.log('DEBUG: LINE認証APIレスポンス成功:', response.data)
       console.log('DEBUG: レスポンスステータス:', response.status)
       console.log('DEBUG: レスポンスヘッダー:', response.headers)
+      
+      // 成功したらコードを使用済みとして記録
+      usedLineCodes.add(code)
       
       if (!response.data || Object.keys(response.data).length === 0) {
         console.error('DEBUG: レスポンスデータが空です')
@@ -131,6 +143,12 @@ const authService = {
         const errorDetail = error.response?.data?.detail || 'リクエストが無効です'
         console.error('DEBUG: 400エラーの詳細:', errorDetail)
         console.error('DEBUG: 400エラーの完全なレスポンス:', error.response?.data)
+        
+        // invalid authorization code の場合は特別なメッセージ
+        if (errorDetail.includes('invalid authorization code')) {
+          throw new Error('LINE認証コードが無効です。再度LINEログインを実行してください。')
+        }
+        
         throw new Error(`LINE認証エラー: ${errorDetail}`)
       }
       
