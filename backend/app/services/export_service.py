@@ -15,7 +15,10 @@ from app.models.meeting import Meeting
 class ExportService:
     def __init__(self):
         self.export_dir = os.path.join("uploads", "exports")
+        print(f"DEBUG: エクスポートディレクトリ作成: {self.export_dir}")
         os.makedirs(self.export_dir, exist_ok=True)
+        print(f"DEBUG: エクスポートディレクトリ存在確認: {os.path.exists(self.export_dir)}")
+        print(f"DEBUG: エクスポートディレクトリ権限確認: {os.access(self.export_dir, os.W_OK)}")
     
     def jst_now(self):
         """日本時間（JST）の現在時刻を返す"""
@@ -54,10 +57,15 @@ class ExportService:
     async def export_to_pdf(self, meeting) -> str:
         """要約をPDF形式でエクスポート"""
         try:
+            print(f"DEBUG: PDFエクスポート開始 - meeting_id: {meeting.id}")
+            
             # ファイル名を生成
             timestamp = self.jst_now().strftime("%Y%m%d_%H%M%S")
             filename = f"meeting_{meeting.id}_{timestamp}.pdf"
             file_path = os.path.join(self.export_dir, filename)
+            
+            print(f"DEBUG: PDFファイルパス: {file_path}")
+            print(f"DEBUG: エクスポートディレクトリ: {self.export_dir}")
             
             # PDFドキュメントを作成
             doc = SimpleDocTemplate(file_path, pagesize=A4)
@@ -98,21 +106,27 @@ class ExportService:
             # 要約内容を追加
             story.append(Paragraph(self.safe_text("要約内容"), heading_style))
             
-            # 要約を段落に分割して追加
-            paragraphs = meeting.summary.split('\n\n')
-            for paragraph in paragraphs:
-                if paragraph.strip():
-                    story.append(Paragraph(self.safe_text(paragraph.strip()), normal_style))
-                    story.append(Spacer(1, 6))
+            # 要約テキストを段落に分割して追加
+            if meeting.summary:
+                summary_paragraphs = meeting.summary.split('\n')
+                for paragraph in summary_paragraphs:
+                    if paragraph.strip():
+                        story.append(Paragraph(self.safe_text(paragraph), normal_style))
+                        story.append(Spacer(1, 6))
             
             # PDFを生成
             doc.build(story)
             
+            print(f"DEBUG: PDF生成完了 - ファイルサイズ: {os.path.getsize(file_path)} bytes")
+            print(f"DEBUG: PDFファイル存在確認: {os.path.exists(file_path)}")
+            
             return file_path
             
         except Exception as e:
-            print(f"ERROR: PDFエクスポート失敗: {str(e)}")
-            raise Exception(f"PDFエクスポートに失敗しました: {str(e)}")
+            print(f"DEBUG: PDFエクスポートエラー: {str(e)}")
+            import traceback
+            print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
+            raise
     
     async def export_to_docx(self, meeting) -> str:
         """要約をWord形式でエクスポート"""
