@@ -86,7 +86,9 @@ const History: React.FC = () => {
   const handleExport = async (meetingId: number, format: 'pdf' | 'docx') => {
     setExporting(true)
     try {
+      console.log(`DEBUG: エクスポート開始 - meetingId: ${meetingId}, format: ${format}`)
       const response = await recordingService.exportSummary(meetingId, format)
+      console.log(`DEBUG: エクスポートレスポンス - format: ${response.data?.format}, filename: ${response.data?.filename}`)
       if (response.data && response.data.download_url) {
         // 相対パスを絶対URLに変換
         const baseUrl = import.meta.env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com'

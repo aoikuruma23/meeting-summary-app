@@ -73,11 +73,19 @@ async def export_summary(
         from app.services.export_service import ExportService
         export_service = ExportService()
         
+        print(f"DEBUG: エクスポート形式: {format}")
+        print(f"DEBUG: エクスポート形式の型: {type(format)}")
+        
         if format == "pdf":
+            print(f"DEBUG: PDFエクスポート開始")
             file_path = await export_service.export_to_pdf(meeting)
+            print(f"DEBUG: PDFエクスポート完了: {file_path}")
         elif format == "docx":
+            print(f"DEBUG: Wordエクスポート開始")
             file_path = await export_service.export_to_docx(meeting)
+            print(f"DEBUG: Wordエクスポート完了: {file_path}")
         else:
+            print(f"DEBUG: サポートされていない形式: {format}")
             raise HTTPException(status_code=400, detail="サポートされていない形式です")
         
         return {

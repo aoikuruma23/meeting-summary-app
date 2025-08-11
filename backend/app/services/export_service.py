@@ -47,6 +47,56 @@ class ExportService:
             print(f"DEBUG: エクスポートディレクトリの内容: {files}")
         except Exception as e:
             print(f"DEBUG: ディレクトリ内容確認エラー: {e}")
+        
+        # 日本語フォントの設定
+        self._setup_japanese_fonts()
+    
+    def _setup_japanese_fonts(self):
+        """日本語フォントを設定"""
+        try:
+            # 利用可能なフォントを確認
+            print(f"利用可能なフォント: {pdfmetrics.getRegisteredFontNames()}")
+            
+            # 日本語フォントの優先順位
+            japanese_fonts = [
+                'HeiseiMin-W3',  # macOS/Linux
+                'HeiseiKakuGo-W5',  # macOS/Linux
+                'HiraginoSansGB-W3',  # macOS
+                'YuGo-Medium',  # macOS
+                'IPAexGothic',  # Linux
+                'TakaoGothic',  # Linux
+                'VL-Gothic-Regular',  # Linux
+                'NotoSansCJK-Regular',  # Google Fonts
+                'SourceHanSans-Regular'  # Adobe Fonts
+            ]
+            
+            # 利用可能な日本語フォントを探す
+            available_font = None
+            for font_name in japanese_fonts:
+                try:
+                    if font_name in pdfmetrics.getRegisteredFontNames():
+                        available_font = font_name
+                        print(f"日本語フォントを使用: {font_name}")
+                        break
+                except:
+                    continue
+            
+            if available_font:
+                # スタイルで日本語フォントを使用
+                self.japanese_font_name = available_font
+                print(f"日本語フォント設定完了: {available_font}")
+            else:
+                # フォールバック: デフォルトフォントを使用
+                self.japanese_font_name = 'Helvetica'
+                print(f"日本語フォントが見つからないため、デフォルトフォントを使用: {self.japanese_font_name}")
+                
+        except Exception as e:
+            print(f"日本語フォント設定エラー: {e}")
+            self.japanese_font_name = 'Helvetica'
+        
+        # フォント設定の最終確認
+        print(f"最終的なフォント設定: {self.japanese_font_name}")
+        print(f"利用可能なフォント一覧: {pdfmetrics.getRegisteredFontNames()}")
     
     def jst_now(self):
         """日本時間（JST）の現在時刻を返す"""
@@ -99,26 +149,29 @@ class ExportService:
             doc = SimpleDocTemplate(file_path, pagesize=A4)
             story = []
             
-            # スタイルを定義
+            # スタイルを定義（日本語フォント対応）
             styles = getSampleStyleSheet()
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Heading1'],
                 fontSize=18,
                 spaceAfter=30,
-                alignment=1  # 中央揃え
+                alignment=1,  # 中央揃え
+                fontName=self.japanese_font_name
             )
             heading_style = ParagraphStyle(
                 'CustomHeading',
                 parent=styles['Heading2'],
                 fontSize=14,
-                spaceAfter=12
+                spaceAfter=12,
+                fontName=self.japanese_font_name
             )
             normal_style = ParagraphStyle(
                 'CustomNormal',
                 parent=styles['Normal'],
                 fontSize=10,
-                spaceAfter=6
+                spaceAfter=6,
+                fontName=self.japanese_font_name
             )
             
             # タイトルを追加
