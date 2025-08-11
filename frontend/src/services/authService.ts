@@ -99,9 +99,13 @@ const authService = {
     try {
       console.log('DEBUG: LINE認証API呼び出し開始')
       console.log('DEBUG: コード長さ:', code.length)
+      console.log('DEBUG: コード内容（最初の10文字）:', code.substring(0, 10))
       console.log('DEBUG: API URL:', `${API_BASE_URL}/api/auth/line`)
       
-      const response = await apiClient.post('/auth/line', { code })
+      const requestData = { code }
+      console.log('DEBUG: リクエストデータ:', requestData)
+      
+      const response = await apiClient.post('/auth/line', requestData)
       console.log('DEBUG: LINE認証APIレスポンス成功:', response.data)
       console.log('DEBUG: レスポンスステータス:', response.status)
       console.log('DEBUG: レスポンスヘッダー:', response.headers)
@@ -121,6 +125,14 @@ const authService = {
         url: error.config?.url,
         headers: error.response?.headers
       })
+      
+      // 400エラーの詳細情報を表示
+      if (error.response?.status === 400) {
+        const errorDetail = error.response?.data?.detail || 'リクエストが無効です'
+        console.error('DEBUG: 400エラーの詳細:', errorDetail)
+        console.error('DEBUG: 400エラーの完全なレスポンス:', error.response?.data)
+        throw new Error(`LINE認証エラー: ${errorDetail}`)
+      }
       
       // ネットワークエラーの場合
       if (error.message === 'Network Error') {
