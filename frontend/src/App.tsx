@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { RecordingProvider } from './contexts/RecordingContext'
 import Header from './components/Header'
@@ -18,7 +18,7 @@ import './App.css'
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
         <RecordingProvider>
           <div className="App">
@@ -42,7 +42,7 @@ function App() {
           </div>
         </RecordingProvider>
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   )
 }
 
