@@ -277,25 +277,39 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         print(f"DEBUG: LINE認証開始 - コード: {request.code[:10]}...")
         print(f"DEBUG: LINE設定 - Channel ID: {settings.LINE_CHANNEL_ID}")
         print(f"DEBUG: LINE設定 - Redirect URI: {settings.LINE_REDIRECT_URI}")
+        print(f"DEBUG: LINE設定 - Channel Secret: {settings.LINE_CHANNEL_SECRET[:10] if settings.LINE_CHANNEL_SECRET else 'None'}...")
         
         # LINEアクセストークンを取得
+        token_data = {
+            "grant_type": "authorization_code",
+            "code": request.code,
+            "redirect_uri": settings.LINE_REDIRECT_URI,
+            "client_id": settings.LINE_CHANNEL_ID,
+            "client_secret": settings.LINE_CHANNEL_SECRET
+        }
+        
+        print(f"DEBUG: LINE token request data: {token_data}")
+        
         token_response = requests.post(
             "https://api.line.me/oauth2/v2.1/token",
-            data={
-                "grant_type": "authorization_code",
-                "code": request.code,
-                "redirect_uri": settings.LINE_REDIRECT_URI,
-                "client_id": settings.LINE_CHANNEL_ID,
-                "client_secret": settings.LINE_CHANNEL_SECRET
-            }
+            data=token_data,
+            timeout=30
         )
         
         print(f"DEBUG: LINE token response status: {token_response.status_code}")
+        print(f"DEBUG: LINE token response headers: {dict(token_response.headers)}")
         print(f"DEBUG: LINE token response: {token_response.text}")
         
         if token_response.status_code != 200:
             print(f"LINE token error: {token_response.text}")
-            raise HTTPException(status_code=400, detail="LINE認証に失敗しました")
+            error_detail = f"LINEトークン取得失敗: {token_response.status_code}"
+            try:
+                error_data = token_response.json()
+                if "error_description" in error_data:
+                    error_detail += f" - {error_data['error_description']}"
+            except:
+                pass
+            raise HTTPException(status_code=400, detail=error_detail)
         
         token_data = token_response.json()
         access_token = token_data.get("access_token")
@@ -308,13 +322,16 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         # LINEプロフィールを取得
         profile_response = requests.get(
             "https://api.line.me/v2/profile",
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=30
         )
         
         print(f"DEBUG: LINE profile response status: {profile_response.status_code}")
+        print(f"DEBUG: LINE profile response headers: {dict(profile_response.headers)}")
         print(f"DEBUG: LINE profile response: {profile_response.text}")
         
         if profile_response.status_code != 200:
+            print(f"LINE profile error: {profile_response.text}")
             raise HTTPException(status_code=400, detail="LINE profile取得に失敗しました")
         
         profile_data = profile_response.json()
@@ -362,6 +379,8 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
         # アクセストークンを生成
         access_token = create_access_token(data={"sub": str(user.id)})
         
+        print(f"DEBUG: LINE認証成功 - ユーザー: {email}")
+        
         return AuthResponse(
             success=True,
             message="LINE認証が成功しました",
@@ -381,11 +400,14 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             }
         )
         
+    except HTTPException:
+        # HTTPExceptionはそのまま再発生
+        raise
     except Exception as e:
         print(f"LINE認証エラー: {str(e)}")
         import traceback
         print(f"DEBUG: スタックトレース: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="LINE認証に失敗しました")
+        raise HTTPException(status_code=500, detail=f"LINE認証に失敗しました: {str(e)}")
 
 @router.post("/email/login", response_model=AuthResponse)
 async def email_login(request: EmailLoginRequest, db: Session = Depends(get_db)):

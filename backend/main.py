@@ -1,7 +1,8 @@
 import os
 import sys
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.api.routes import auth, recording, summary, billing
 from app.core.database import engine, Base
 from app.middleware.rate_limit import rate_limit_logging_middleware
@@ -31,7 +32,7 @@ except Exception as e:
 
 app = FastAPI(title="Meeting Summary API", version="1.0.0")
 
-# CORS設定
+# CORS設定 - より包括的に設定
 origins = [
     "https://meeting-summary-app.jibunkaikaku-lab.com",
     "https://meeting-summary-app-backend.jibunkaikaku-lab.com",
@@ -40,7 +41,24 @@ origins = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:8000",
+    # 開発環境用
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
 ]
+
+# 環境変数から追加のオリジンを取得
+env_origins = os.environ.get("ALLOWED_ORIGINS", "")
+if env_origins:
+    try:
+        import json
+        additional_origins = json.loads(env_origins)
+        if isinstance(additional_origins, list):
+            origins.extend(additional_origins)
+    except:
+        pass
+
+print(f"CORS設定 - 許可されるオリジン: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,12 +66,22 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # レート制限ミドルウェアを追加
 @app.middleware("http")
 async def rate_limit_middleware(request, call_next):
     return await rate_limit_logging_middleware(request, call_next)
+
+# グローバルエラーハンドラー
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    print(f"グローバルエラー: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "error": str(exc)}
+    )
 
 # APIルーターを追加
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -68,6 +96,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "API is running normally"}
+
+@app.get("/cors-test")
+async def cors_test():
+    return {"message": "CORS test successful", "origins": origins}
 
 if __name__ == "__main__":
     import uvicorn
