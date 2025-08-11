@@ -121,28 +121,44 @@ class ExportService:
                 try:
                     # 複数の日本語フォントファイルを試行
                     font_files = [
-                        "fonts/BIZ-UDGothicR.ttc",  # 新しく追加した日本語フォント（最優先）
+                        os.path.join("fonts", "BIZ-UDGothicR.ttc"),  # 新しく追加した日本語フォント（最優先）
                         "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",  # Ubuntu
                         "/usr/share/fonts/opentype/ipafont-gothic/IPAGothic.ttf",  # CentOS/RHEL
                         "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",  # macOS
                         "/Library/Fonts/Arial Unicode MS.ttf",  # macOS
-                        "fonts/NotoSansCJK-Regular.ttc",  # カスタムフォント
-                        "fonts/NotoSansJP-Regular.otf"   # カスタムフォント
+                        os.path.join("fonts", "NotoSansCJK-Regular.ttc"),  # カスタムフォント
+                        os.path.join("fonts", "NotoSansJP-Regular.otf")   # カスタムフォント
                     ]
                     
                     font_registered = False
                     for font_path in font_files:
                         try:
-                            if os.path.exists(font_path):
-                                # フォントファイルを登録
-                                font_name = f"JapaneseFont_{os.path.basename(font_path)}"
-                                pdfmetrics.registerFont(TTFont(font_name, font_path))
-                                available_font = font_name
-                                font_registered = True
-                                print(f"日本語フォントファイルを埋め込みました: {font_path}")
+                            # 絶対パスと相対パスの両方を試行
+                            paths_to_try = [font_path]
+                            if not os.path.isabs(font_path):
+                                # 相対パスの場合、現在の作業ディレクトリからの絶対パスも試行
+                                current_dir = os.getcwd()
+                                absolute_path = os.path.join(current_dir, font_path)
+                                paths_to_try.append(absolute_path)
+                                # backendディレクトリからのパスも試行
+                                backend_path = os.path.join(current_dir, "backend", font_path)
+                                paths_to_try.append(backend_path)
+                            
+                            for try_path in paths_to_try:
+                                if os.path.exists(try_path):
+                                    # フォントファイルを登録
+                                    font_name = f"JapaneseFont_{os.path.basename(try_path)}"
+                                    pdfmetrics.registerFont(TTFont(font_name, try_path))
+                                    available_font = font_name
+                                    font_registered = True
+                                    print(f"日本語フォントファイルを埋め込みました: {try_path}")
+                                    break
+                                else:
+                                    print(f"フォントファイルが存在しません: {try_path}")
+                            
+                            if font_registered:
                                 break
-                            else:
-                                print(f"フォントファイルが存在しません: {font_path}")
+                                
                         except Exception as font_error:
                             print(f"フォントファイル埋め込みエラー ({font_path}): {font_error}")
                             continue
