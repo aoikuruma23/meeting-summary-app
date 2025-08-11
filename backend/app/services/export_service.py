@@ -57,6 +57,40 @@ class ExportService:
             # 利用可能なフォントを確認
             print(f"利用可能なフォント: {pdfmetrics.getRegisteredFontNames()}")
             
+            # システムフォントの詳細調査
+            print("=== システムフォント詳細調査 ===")
+            try:
+                import subprocess
+                # fc-listコマンドで日本語フォントを検索
+                result = subprocess.run(['fc-list', ':lang=ja'], capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    print(f"fc-list日本語フォント結果: {result.stdout[:500]}...")
+                else:
+                    print(f"fc-listエラー: {result.stderr}")
+            except Exception as e:
+                print(f"fc-list実行エラー: {e}")
+            
+            # フォントディレクトリの存在確認
+            font_dirs = [
+                "/usr/share/fonts",
+                "/usr/local/share/fonts",
+                "/System/Library/Fonts",
+                "/Library/Fonts"
+            ]
+            
+            for font_dir in font_dirs:
+                if os.path.exists(font_dir):
+                    print(f"フォントディレクトリ存在: {font_dir}")
+                    try:
+                        files = os.listdir(font_dir)
+                        japanese_files = [f for f in files if any(char in f.lower() for char in ['japanese', 'japan', 'jp', 'gothic', 'mincho', 'ヒラギノ', 'メイリオ'])]
+                        if japanese_files:
+                            print(f"日本語フォントファイル発見 ({font_dir}): {japanese_files[:5]}")
+                    except Exception as e:
+                        print(f"ディレクトリ読み取りエラー ({font_dir}): {e}")
+                else:
+                    print(f"フォントディレクトリ不存在: {font_dir}")
+            
             # 日本語フォントの優先順位
             japanese_fonts = [
                 'HeiseiMin-W3',  # macOS/Linux
@@ -149,9 +183,10 @@ class ExportService:
                                     continue
                     
                     if not font_registered:
-                        # フォールバック: デフォルトフォントを使用
+                        # 最後の手段: デフォルトフォントを使用し、日本語文字を置換
                         available_font = 'Helvetica'
                         print(f"日本語フォントの埋め込みに失敗したため、デフォルトフォントを使用: {available_font}")
+                        print("警告: 日本語文字は正しく表示されない可能性があります")
                         
                 except Exception as embed_error:
                     print(f"フォント埋め込み処理エラー: {embed_error}")
@@ -173,6 +208,7 @@ class ExportService:
         # フォント設定の最終確認
         print(f"最終的なフォント設定: {self.japanese_font_name}")
         print(f"利用可能なフォント一覧: {pdfmetrics.getRegisteredFontNames()}")
+        print("=== フォント設定完了 ===")
     
     def jst_now(self):
         """日本時間（JST）の現在時刻を返す"""
@@ -200,12 +236,95 @@ class ExportService:
         """テキストを安全に処理"""
         if not text:
             return ""
+        
+        # 日本語フォントが利用できない場合の緊急対応
+        if self.japanese_font_name == 'Helvetica':
+            # 日本語文字を英語に置換
+            text = self._replace_japanese_with_english(text)
+        
         # 改行文字を削除
         text = text.replace('\n', ' ')
         # 特殊文字をエスケープ
         text = text.replace('&', '&amp;')
         text = text.replace('<', '&lt;')
         text = text.replace('>', '&gt;')
+        return text
+    
+    def _replace_japanese_with_english(self, text):
+        """日本語文字を英語に置換（緊急対応）"""
+        replacements = {
+            '議事録要約': 'Meeting Summary',
+            '会議タイトル': 'Meeting Title',
+            '作成日時': 'Created Date',
+            '議事録ID': 'Meeting ID',
+            '要約内容': 'Summary Content',
+            '会議概要': 'Meeting Overview',
+            'アクション項目': 'Action Items',
+            '次回の議題': 'Next Meeting Topics',
+            '重要なポイント': 'Key Points',
+            '担当者': 'Responsible Person',
+            '期限': 'Deadline',
+            '議題': 'Agenda',
+            '決定事項': 'Decisions',
+            '参加者': 'Participants',
+            '開始時刻': 'Start Time',
+            '終了時刻': 'End Time',
+            '録音時間': 'Recording Duration',
+            '文字数': 'Character Count',
+            '処理状況': 'Processing Status',
+            '完了': 'Completed',
+            '処理中': 'Processing',
+            'エラー': 'Error',
+            '成功': 'Success',
+            '失敗': 'Failed',
+            '保存': 'Save',
+            '削除': 'Delete',
+            '編集': 'Edit',
+            '表示': 'Display',
+            '検索': 'Search',
+            'フィルター': 'Filter',
+            '並び替え': 'Sort',
+            '更新': 'Update',
+            '確認': 'Confirm',
+            'キャンセル': 'Cancel',
+            '閉じる': 'Close',
+            '戻る': 'Back',
+            '次へ': 'Next',
+            '前へ': 'Previous',
+            '最初': 'First',
+            '最後': 'Last',
+            'ページ': 'Page',
+            '件': 'Items',
+            '件数': 'Count',
+            '合計': 'Total',
+            '平均': 'Average',
+            '最大': 'Maximum',
+            '最小': 'Minimum',
+            '日付': 'Date',
+            '時刻': 'Time',
+            '年': 'Year',
+            '月': 'Month',
+            '日': 'Day',
+            '時': 'Hour',
+            '分': 'Minute',
+            '秒': 'Second',
+            '今日': 'Today',
+            '昨日': 'Yesterday',
+            '明日': 'Tomorrow',
+            '今週': 'This Week',
+            '先週': 'Last Week',
+            '来週': 'Next Week',
+            '今月': 'This Month',
+            '先月': 'Last Month',
+            '来月': 'Next Month',
+            '今年': 'This Year',
+            '去年': 'Last Year',
+            '来年': 'Next Year'
+        }
+        
+        for japanese, english in replacements.items():
+            text = text.replace(japanese, english)
+        
         return text
     
     async def export_to_pdf(self, meeting) -> str:
@@ -251,17 +370,23 @@ class ExportService:
             )
             
             # タイトルを追加
-            story.append(Paragraph(self.safe_text("議事録要約"), title_style))
+            title_text = "議事録要約" if self.japanese_font_name != 'Helvetica' else "Meeting Summary"
+            story.append(Paragraph(self.safe_text(title_text), title_style))
             story.append(Spacer(1, 20))
             
             # 会議情報を追加
-            story.append(Paragraph(self.safe_text(f"会議タイトル: {meeting.title}"), heading_style))
-            story.append(Paragraph(self.safe_text(f"作成日時: {self.format_jst_datetime(meeting.created_at)}"), normal_style))
-            story.append(Paragraph(self.safe_text(f"議事録ID: {meeting.id}"), normal_style))
+            title_label = "会議タイトル:" if self.japanese_font_name != 'Helvetica' else "Meeting Title:"
+            date_label = "作成日時:" if self.japanese_font_name != 'Helvetica' else "Created Date:"
+            id_label = "議事録ID:" if self.japanese_font_name != 'Helvetica' else "Meeting ID:"
+            
+            story.append(Paragraph(self.safe_text(f"{title_label} {meeting.title}"), heading_style))
+            story.append(Paragraph(self.safe_text(f"{date_label} {self.format_jst_datetime(meeting.created_at)}"), normal_style))
+            story.append(Paragraph(self.safe_text(f"{id_label} {meeting.id}"), normal_style))
             story.append(Spacer(1, 20))
             
             # 要約内容を追加
-            story.append(Paragraph(self.safe_text("要約内容"), heading_style))
+            summary_label = "要約内容" if self.japanese_font_name != 'Helvetica' else "Summary Content"
+            story.append(Paragraph(self.safe_text(summary_label), heading_style))
             
             # 要約テキストを段落に分割して追加
             if meeting.summary:
