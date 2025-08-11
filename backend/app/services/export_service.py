@@ -121,6 +121,7 @@ class ExportService:
                 try:
                     # 複数の日本語フォントファイルを試行
                     font_files = [
+                        "fonts/BIZ-UDGothicR.ttc",  # 新しく追加した日本語フォント（最優先）
                         "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",  # Ubuntu
                         "/usr/share/fonts/opentype/ipafont-gothic/IPAGothic.ttf",  # CentOS/RHEL
                         "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",  # macOS
@@ -140,6 +141,8 @@ class ExportService:
                                 font_registered = True
                                 print(f"日本語フォントファイルを埋め込みました: {font_path}")
                                 break
+                            else:
+                                print(f"フォントファイルが存在しません: {font_path}")
                         except Exception as font_error:
                             print(f"フォントファイル埋め込みエラー ({font_path}): {font_error}")
                             continue
