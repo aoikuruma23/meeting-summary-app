@@ -15,10 +15,38 @@ from app.models.meeting import Meeting
 class ExportService:
     def __init__(self):
         self.export_dir = os.path.join("uploads", "exports")
-        print(f"DEBUG: エクスポートディレクトリ作成: {self.export_dir}")
-        os.makedirs(self.export_dir, exist_ok=True)
+        print(f"DEBUG: エクスポートディレクトリ作成開始: {self.export_dir}")
+        
+        # 親ディレクトリ（uploads）の存在確認
+        uploads_dir = "uploads"
+        if not os.path.exists(uploads_dir):
+            print(f"DEBUG: uploadsディレクトリが存在しません。作成します: {uploads_dir}")
+            os.makedirs(uploads_dir, exist_ok=True)
+        
+        # エクスポートディレクトリの作成
+        try:
+            os.makedirs(self.export_dir, exist_ok=True)
+            print(f"DEBUG: エクスポートディレクトリ作成完了: {self.export_dir}")
+        except Exception as e:
+            print(f"DEBUG: エクスポートディレクトリ作成エラー: {e}")
+            raise
+        
+        # ディレクトリの存在確認
         print(f"DEBUG: エクスポートディレクトリ存在確認: {os.path.exists(self.export_dir)}")
-        print(f"DEBUG: エクスポートディレクトリ権限確認: {os.access(self.export_dir, os.W_OK)}")
+        
+        # ディレクトリの権限確認
+        try:
+            print(f"DEBUG: エクスポートディレクトリ権限確認: {os.access(self.export_dir, os.W_OK)}")
+            print(f"DEBUG: エクスポートディレクトリ読み取り権限: {os.access(self.export_dir, os.R_OK)}")
+        except Exception as e:
+            print(f"DEBUG: 権限確認エラー: {e}")
+        
+        # ディレクトリの内容確認
+        try:
+            files = os.listdir(self.export_dir)
+            print(f"DEBUG: エクスポートディレクトリの内容: {files}")
+        except Exception as e:
+            print(f"DEBUG: ディレクトリ内容確認エラー: {e}")
     
     def jst_now(self):
         """日本時間（JST）の現在時刻を返す"""
@@ -117,8 +145,33 @@ class ExportService:
             # PDFを生成
             doc.build(story)
             
-            print(f"DEBUG: PDF生成完了 - ファイルサイズ: {os.path.getsize(file_path)} bytes")
-            print(f"DEBUG: PDFファイル存在確認: {os.path.exists(file_path)}")
+            print(f"DEBUG: PDF生成完了 - ファイルパス: {file_path}")
+            
+            # ファイル生成後の詳細確認
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                print(f"DEBUG: PDFファイル存在確認: 成功")
+                print(f"DEBUG: PDFファイルサイズ: {file_size} bytes")
+                
+                # ファイルの権限確認
+                try:
+                    read_ok = os.access(file_path, os.R_OK)
+                    write_ok = os.access(file_path, os.W_OK)
+                    print(f"DEBUG: PDFファイル読み取り権限: {read_ok}")
+                    print(f"DEBUG: PDFファイル書き込み権限: {write_ok}")
+                except Exception as e:
+                    print(f"DEBUG: ファイル権限確認エラー: {e}")
+                
+                # ファイルの内容確認（最初の数バイト）
+                try:
+                    with open(file_path, 'rb') as f:
+                        header = f.read(10)
+                        print(f"DEBUG: PDFファイルヘッダー: {header}")
+                except Exception as e:
+                    print(f"DEBUG: ファイル内容確認エラー: {e}")
+            else:
+                print(f"DEBUG: PDFファイル存在確認: 失敗 - ファイルが存在しません")
+                raise Exception("PDFファイルの生成に失敗しました")
             
             return file_path
             
