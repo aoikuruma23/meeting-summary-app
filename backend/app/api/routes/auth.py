@@ -370,6 +370,9 @@ async def line_auth(request: LineAuthRequest, db: Session = Depends(get_db)):
             print(f"DEBUG: LINEユーザー作成完了 - ID: {user.id}")
         else:
             print(f"DEBUG: 既存LINEユーザー取得 - ID: {user.id}")
+            # 既存ユーザーの場合もemail変数を定義
+            email = user.email
+            
             # 既存ユーザーの場合もプレミアム状態を確認・更新
             if user.is_premium != "true":
                 user.is_premium = "true"
