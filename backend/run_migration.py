@@ -28,30 +28,70 @@ def run_migration():
         
         # 新しいカラムを追加
         try:
-            # 既存のカラムを確認
-            result = db.execute(text("PRAGMA table_info(users)"))
-            existing_columns = [row[1] for row in result.fetchall()]
+            # データベースタイプを判定
+            database_url = settings.DATABASE_URL
+            is_postgresql = database_url.startswith('postgresql://') or database_url.startswith('postgres://')
             
-            # profile_pictureカラムを追加
-            if "profile_picture" not in existing_columns:
-                db.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR"))
-                print("✓ profile_pictureカラムを追加しました")
+            if is_postgresql:
+                # PostgreSQL用の処理
+                print("ℹ PostgreSQLデータベースを検出しました")
+                
+                # 既存のカラムを確認（PostgreSQL用）
+                result = db.execute(text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'users' AND table_schema = 'public'
+                """))
+                existing_columns = [row[0] for row in result.fetchall()]
+                
+                # profile_pictureカラムを追加
+                if "profile_picture" not in existing_columns:
+                    db.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR"))
+                    print("✓ profile_pictureカラムを追加しました")
+                else:
+                    print("ℹ profile_pictureカラムは既に存在します")
+                
+                # auth_providerカラムを追加
+                if "auth_provider" not in existing_columns:
+                    db.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR"))
+                    print("✓ auth_providerカラムを追加しました")
+                else:
+                    print("ℹ auth_providerカラムは既に存在します")
+                
+                # line_user_idカラムを追加
+                if "line_user_id" not in existing_columns:
+                    db.execute(text("ALTER TABLE users ADD COLUMN line_user_id VARCHAR"))
+                    print("✓ line_user_idカラムを追加しました")
+                else:
+                    print("ℹ line_user_idカラムは既に存在します")
             else:
-                print("ℹ profile_pictureカラムは既に存在します")
-            
-            # auth_providerカラムを追加
-            if "auth_provider" not in existing_columns:
-                db.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR"))
-                print("✓ auth_providerカラムを追加しました")
-            else:
-                print("ℹ auth_providerカラムは既に存在します")
-            
-            # line_user_idカラムを追加
-            if "line_user_id" not in existing_columns:
-                db.execute(text("ALTER TABLE users ADD COLUMN line_user_id VARCHAR"))
-                print("✓ line_user_idカラムを追加しました")
-            else:
-                print("ℹ line_user_idカラムは既に存在します")
+                # SQLite用の処理
+                print("ℹ SQLiteデータベースを検出しました")
+                
+                # 既存のカラムを確認（SQLite用）
+                result = db.execute(text("PRAGMA table_info(users)"))
+                existing_columns = [row[1] for row in result.fetchall()]
+                
+                # profile_pictureカラムを追加
+                if "profile_picture" not in existing_columns:
+                    db.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR"))
+                    print("✓ profile_pictureカラムを追加しました")
+                else:
+                    print("ℹ profile_pictureカラムは既に存在します")
+                
+                # auth_providerカラムを追加
+                if "auth_provider" not in existing_columns:
+                    db.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR"))
+                    print("✓ auth_providerカラムを追加しました")
+                else:
+                    print("ℹ auth_providerカラムは既に存在します")
+                
+                # line_user_idカラムを追加
+                if "line_user_id" not in existing_columns:
+                    db.execute(text("ALTER TABLE users ADD COLUMN line_user_id VARCHAR"))
+                    print("✓ line_user_idカラムを追加しました")
+                else:
+                    print("ℹ line_user_idカラムは既に存在します")
             
             # 既存のline_idカラムをline_user_idにリネーム（存在する場合）
             try:
