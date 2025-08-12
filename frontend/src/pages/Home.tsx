@@ -87,12 +87,13 @@ const Home: React.FC = () => {
       }
     }
 
-    // 認証コードが存在する場合のみ処理を実行
-    const urlParams = new URLSearchParams(window.location.search)
-    const hasGoogleToken = urlParams.get('id_token')
-    const hasLineCode = urlParams.get('code') && urlParams.get('state') === 'line'
+    // 認証コードが存在する場合のみ処理を実行（search と hash の両方を確認）
+    const searchParamsForCheck = new URLSearchParams(window.location.search)
+    const hashParamsForCheck = new URLSearchParams(window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash)
+    const hasGoogleToken = !!(searchParamsForCheck.get('id_token') || hashParamsForCheck.get('id_token'))
+    const hasLineCode = searchParamsForCheck.get('code') && searchParamsForCheck.get('state') === 'line'
     
-    console.log('DEBUG: 認証パラメータ確認 - hasGoogleToken:', !!hasGoogleToken, 'hasLineCode:', !!hasLineCode)
+    console.log('DEBUG: 認証パラメータ確認 - hasGoogleToken:', hasGoogleToken, 'hasLineCode:', !!hasLineCode)
     
     if (hasGoogleToken) {
       console.log('DEBUG: Google認証処理開始')
