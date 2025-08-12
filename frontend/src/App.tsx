@@ -1,22 +1,43 @@
+import React from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+
+import Header from './components/Header'
+import Footer from './components/Footer'
+
+import Home from './pages/Home'
+import Login from './pages/Login'
+import Recording from './pages/Recording'
+import History from './pages/History'
+import Billing from './pages/Billing'
+import Settings from './pages/Settings'
+import Help from './pages/Help'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import AuthCallback from './pages/AuthCallback'
+import EmailVerification from './pages/EmailVerification'
 
 function App() {
   return (
     <div className="App">
-      <h1>Meeting Summary App</h1>
-      <p>基本的な動作確認中</p>
-      <div>
-        <h2>認証テスト</h2>
-        <button onClick={() => alert('Google認証テスト')}>
-          Google認証テスト
-        </button>
-        <button onClick={() => alert('LINE認証テスト')}>
-          LINE認証テスト
-        </button>
-        <button onClick={() => alert('メール認証テスト')}>
-          メール認証テスト
-        </button>
-      </div>
+      <Header />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/recording" element={<Recording />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/email-verification" element={<EmailVerification />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <Footer />
     </div>
   )
 }
