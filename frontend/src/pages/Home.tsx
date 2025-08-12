@@ -22,8 +22,10 @@ const Home: React.FC = () => {
       }
       
       try {
-        const urlParams = new URLSearchParams(window.location.search)
-        const idToken = urlParams.get('id_token')
+        // Googleはid_tokenをハッシュ(#)で返す場合があるため両方を見る
+        const searchParams = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash)
+        const idToken = searchParams.get('id_token') || hashParams.get('id_token')
         
         if (idToken) {
           console.log('DEBUG: Google認証トークンを検出')
@@ -34,6 +36,7 @@ const Home: React.FC = () => {
           
           if (response.success && response.data) {
             await login(response.data.access_token!, response.data.user)
+            // URLクリーンアップ（ハッシュも含めて）
             window.history.replaceState({}, document.title, window.location.pathname)
             navigate('/')
           }

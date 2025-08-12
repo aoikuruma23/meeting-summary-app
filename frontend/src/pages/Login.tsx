@@ -33,8 +33,8 @@ const Login: React.FC = () => {
         return
       }
 
-      // Googleはimplicit flowでハッシュ(#)にトークンを返すため、専用のコールバックページに戻す
-      const redirectUri = `${window.location.origin}/auth/callback`
+      // サーバー側のリライトが未設定でも動くように、ルート('/')に戻す
+      const redirectUri = window.location.origin
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid%20email%20profile&nonce=${Date.now()}`
       console.log('DEBUG: Google認証URL:', googleAuthUrl)
       window.location.href = googleAuthUrl
