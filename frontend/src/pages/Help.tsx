@@ -54,18 +54,19 @@ const Help: React.FC = () => {
           <p>佐藤 幸弘</p>
           
           <h3>所在地</h3>
-          <p>〒100-0001 東京都千代田区千代田1-1-1</p>
+          <p>〒160-0023 東京都新宿区西新宿3丁目3番13号 西新宿水間ビル2F</p>
           
           <h3>連絡先</h3>
           <ul>
             <li><strong>メールアドレス</strong>: jibunkaikakulab@gmail.com</li>
-            <li><strong>電話番号</strong>: 03-1234-5678（平日9:00-18:00）</li>
+            <li><strong>電話番号</strong>: 070-1326-8481</li>
+            <li><strong>受付時間</strong>: 平日 10:00〜17:00（土日・祝日・年末年始除く）</li>
           </ul>
           
           <h3>料金体系</h3>
           <ul>
             <li><strong>無料プラン</strong>: 月30分まで録音可能</li>
-            <li><strong>プレミアムプラン</strong>: 月額980円（税込）、月2時間まで録音可能</li>
+            <li><strong>プレミアムプラン</strong>: 月額999円（税込）、月2時間まで録音可能</li>
           </ul>
           
           <h3>支払い方法</h3>

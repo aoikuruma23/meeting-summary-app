@@ -80,7 +80,7 @@ const Settings: React.FC = () => {
         <div className="settings-section">
           <h2>プレミアムプラン</h2>
           <div className="premium-info">
-            <h3>月額980円</h3>
+            <h3>月額999円（税込）</h3>
             <ul>
               <li>無制限の録音・要約</li>
               <li>優先サポート</li>

@@ -40,7 +40,7 @@ const Billing: React.FC = () => {
     {
       id: 'premium',
       name: 'プレミアムプラン',
-      price: 980,
+      price: 999,
       features: [
         '最大2時間の録音',
         '無制限利用',
@@ -192,7 +192,7 @@ const Billing: React.FC = () => {
       <div className="billing-info">
         <h3>お支払いについて</h3>
         <ul>
-          <li>プレミアムプランは月額980円（税込）です</li>
+          <li>プレミアムプランは月額999円（税込）です</li>
           <li>いつでもキャンセル可能です</li>
           <li>無料期間中は課金されません</li>
           <li>お支払い情報はStripeで安全に管理されます</li>

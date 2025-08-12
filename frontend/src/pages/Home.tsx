@@ -250,7 +250,7 @@ const Home: React.FC = () => {
               <div className="pricing-badge">人気</div>
               <div className="pricing-header">
                 <h3>プレミアムプラン</h3>
-                <div className="price">¥980</div>
+                <div className="price">¥999</div>
                 <p className="price-period">/月</p>
               </div>
               <ul className="pricing-features">
