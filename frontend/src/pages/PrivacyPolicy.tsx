@@ -115,7 +115,7 @@ const PrivacyPolicy: React.FC = () => {
           <p>お客様は、当社に対して、個人情報の開示、訂正、利用停止を求めることができます。その場合は、以下の方法によりお申し込みください：</p>
           <ul>
             <li>メール: jibunkaikakulab@gmail.com</li>
-            <li>LINE: @meeting-summary-app</li>
+            <li>LINE: @907gmfys</li>
           </ul>
           <p>※ 開示等の請求により、当社が開示等を行う場合は、お客様ご本人であることを確認させていただきます。</p>
         </div>
@@ -145,7 +145,7 @@ const PrivacyPolicy: React.FC = () => {
           <p>本プライバシーポリシーに関するお問い合わせは、以下の方法でお願いいたします：</p>
           <ul>
             <li>メール: jibunkaikakulab@gmail.com</li>
-            <li>LINE: @meeting-summary-app</li>
+            <li>LINE: @907gmfys</li>
           </ul>
         </div>
       </div>

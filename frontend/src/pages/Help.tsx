@@ -99,7 +99,7 @@ const Help: React.FC = () => {
           <p>上記で解決しない場合は、以下の方法でお問い合わせください：</p>
           <ul>
             <li><strong>📧 メール</strong>: jibunkaikakulab@gmail.com</li>
-            <li><strong>💬 LINE</strong>: @meeting-summary-app</li>
+            <li><strong>💬 LINE</strong>: @907gmfys</li>
           </ul>
           
           <h3>お問い合わせの際にご準備ください</h3>

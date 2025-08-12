@@ -165,7 +165,7 @@ const TermsOfService: React.FC = () => {
           <p>本規約に関するお問い合わせは、以下の方法でお願いいたします：</p>
           <ul>
             <li>メール: jibunkaikakulab@gmail.com</li>
-            <li>LINE: @meeting-summary-app</li>
+            <li>LINE: @907gmfys</li>
           </ul>
         </div>
       </div>

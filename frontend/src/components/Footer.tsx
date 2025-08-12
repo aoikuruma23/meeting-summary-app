@@ -49,7 +49,10 @@ const Footer: React.FC = () => {
         
         <div className="footer-section">
           <h4>お問い合わせ</h4>
-          <p>Email: support@meeting-summary-app.com</p>
+          <p>Email: jibunkaikakulab@gmail.com</p>
+          <p>LINE: @907gmfys</p>
+          <p>電話: 070-1326-8481</p>
+          <p>受付時間: 平日 10:00〜17:00（土日・祝日・年末年始除く）</p>
         </div>
       </div>
       
