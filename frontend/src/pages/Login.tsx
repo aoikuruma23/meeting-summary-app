@@ -10,10 +10,14 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [isRegister, setIsRegister] = useState(false)
+  const [isForgot, setIsForgot] = useState(false)
+  const [isResetMode, setIsResetMode] = useState(false)
   
   // メール・パスワード用の状態
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [resetCode, setResetCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
   const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
@@ -77,7 +81,33 @@ const Login: React.FC = () => {
     setError('')
 
     try {
-      if (isRegister) {
+      if (isForgot) {
+        // リセットコード送信
+        const res = await fetch(((import.meta as any).env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com') + '/api/auth/email/forgot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        })
+        if (!res.ok) throw new Error('リセットメール送信に失敗しました')
+        alert('パスワードリセットコードを送信しました。メールをご確認ください。')
+        setIsForgot(false)
+        setIsResetMode(true)
+        setIsRegister(false)
+        setError('')
+      } else if (isResetMode) {
+        // パスワード再設定
+        const res = await fetch(((import.meta as any).env.VITE_API_URL || 'https://meeting-summary-app-backend.jibunkaikaku-lab.com') + '/api/auth/email/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, verification_code: resetCode, new_password: newPassword })
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data?.detail || 'パスワードの再設定に失敗しました')
+        alert('パスワードを更新しました。新しいパスワードでログインしてください。')
+        setIsResetMode(false)
+        setResetCode('')
+        setNewPassword('')
+      } else if (isRegister) {
         // 登録
         const response = await authService.emailRegister({
           email,
@@ -149,13 +179,13 @@ const Login: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>{isRegister ? 'アカウント登録' : 'ログイン'}</h1>
+        <h1>{isResetMode ? 'パスワード再設定' : isForgot ? 'パスワードをお忘れですか？' : isRegister ? 'アカウント登録' : 'ログイン'}</h1>
         
         {error && <div className="error-message">{error}</div>}
         
         {/* メール・パスワードフォーム */}
         <form onSubmit={handleEmailSubmit} className="email-form">
-          {isRegister && (
+          {(isRegister) && (
             <div className="form-group">
               <label htmlFor="name">お名前</label>
               <input
@@ -181,6 +211,44 @@ const Login: React.FC = () => {
             />
           </div>
           
+          {isResetMode && (
+            <>
+              <div className="form-group">
+                <label htmlFor="reset_code">確認コード</label>
+                <input
+                  id="reset_code"
+                  type="text"
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value)}
+                  required
+                  placeholder="メールに届いた6桁のコード"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="new_password">新しいパスワード</label>
+                <div className="password-input-container">
+                  <input
+                    id="new_password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="新しいパスワードを入力"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!isForgot && !isResetMode && (
           <div className="form-group">
             <label htmlFor="password">パスワード</label>
             <div className="password-input-container">
@@ -189,7 +257,7 @@ const Login: React.FC = () => {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
+                required={!isForgot && !isResetMode}
                 placeholder="パスワードを入力"
                 minLength={6}
               />
@@ -202,16 +270,44 @@ const Login: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
           
           <button 
             type="submit" 
             className="btn btn-primary email-submit"
             disabled={isLoading}
           >
-            {isLoading ? '処理中...' : (isRegister ? '登録' : 'ログイン')}
+            {isLoading ? '処理中...' : (isForgot ? 'リセットコードを送る' : isResetMode ? 'パスワードを再設定' : isRegister ? '登録' : 'ログイン')}
           </button>
         </form>
         
+        {!isForgot && !isResetMode && (
+          <div className="toggle-form" style={{ marginTop: 8 }}>
+            <button type="button" className="toggle-button" onClick={() => { setIsForgot(true); setIsRegister(false) }}>
+              パスワードをお忘れの方はこちら
+            </button>
+          </div>
+        )}
+
+        {isForgot && (
+          <div className="toggle-form" style={{ marginTop: 8 }}>
+            <button type="button" className="toggle-button" onClick={() => { setIsForgot(false); setIsResetMode(false) }}>
+              ログイン画面に戻る
+            </button>
+            <button type="button" className="toggle-button" onClick={() => { setIsForgot(false); setIsResetMode(true) }}>
+              リセットコードをお持ちの方はこちら
+            </button>
+          </div>
+        )}
+
+        {isResetMode && (
+          <div className="toggle-form" style={{ marginTop: 8 }}>
+            <button type="button" className="toggle-button" onClick={() => { setIsResetMode(false); setIsForgot(false) }}>
+              ログイン画面に戻る
+            </button>
+          </div>
+        )}
+
         <div className="divider">
           <span>または</span>
         </div>

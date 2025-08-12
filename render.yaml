@@ -6,7 +6,7 @@ services:
     buildCommand: |
       # 日本語フォントのインストール
       sudo apt-get update
-      sudo apt-get install -y fonts-ipafont fonts-ipafont-gothic fonts-ipafont-mincho fonts-noto-cjk fonts-noto-cjk-extra fonts-takao-gothic fonts-takao-mincho fonts-vlgothic fonts-umeplus
+      sudo apt-get install -y fonts-ipafont fonts-ipafont-gothic fonts-ipafont-mincho fonts-noto-cjk fonts-noto-cjk-extra fonts-takao-gothic fonts-takao-mincho fonts-vlgothic fonts-umeplus fonts-noto-cjk-extra fonts-noto-cjk
       sudo fc-cache -fv
       # インストールされたフォントの確認
       echo "=== インストールされた日本語フォント ==="

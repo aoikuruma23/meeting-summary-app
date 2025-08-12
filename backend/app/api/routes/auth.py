@@ -20,6 +20,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # メール検証用の一時的なコード保存
 verification_codes: Dict[str, Dict[str, Any]] = {}
+# パスワードリセット用コード保存
+password_reset_codes: Dict[str, Dict[str, Any]] = {}
 
 class EmailRegisterRequest(BaseModel):
     email: EmailStr
@@ -33,6 +35,14 @@ class EmailLoginRequest(BaseModel):
 class EmailVerifyRequest(BaseModel):
     email: EmailStr
     verification_code: str
+
+class EmailForgotRequest(BaseModel):
+    email: EmailStr
+
+class EmailResetRequest(BaseModel):
+    email: EmailStr
+    verification_code: str
+    new_password: str
 
 class AuthResponse(BaseModel):
     success: bool
@@ -142,8 +152,8 @@ def get_email_validation_error(email: str) -> str:
     
     return "このメールアドレスは利用できません。正しいメールアドレスを入力してください。"
 
-def send_verification_email(email: str, code: str) -> bool:
-    """SendGridを使用してメール送信"""
+def send_verification_email(email: str, code: str, *, subject: str = "メールアドレス確認") -> bool:
+    """SendGridを使用してメール送信（件名を指定可能）"""
     try:
         from sendgrid import SendGridAPIClient
         from sendgrid.helpers.mail import Mail
@@ -158,9 +168,9 @@ def send_verification_email(email: str, code: str) -> bool:
         message = Mail(
             from_email=from_email,
             to_emails=email,
-            subject="メールアドレス確認",
+            subject=subject,
             html_content=f"""
-            <h2>メールアドレス確認</h2>
+            <h2>{subject}</h2>
             <p>以下の確認コードを入力してください：</p>
             <h1 style="font-size: 2em; color: #007bff;">{code}</h1>
             <p>このコードは10分間有効です。</p>
@@ -563,6 +573,65 @@ async def email_verify(request: EmailVerifyRequest, db: Session = Depends(get_db
             }
         }
     )
+
+@router.post("/email/forgot")
+async def email_forgot(request: EmailForgotRequest, db: Session = Depends(get_db)):
+    """パスワードリセットコードを送信"""
+    # 対象ユーザーの存在確認（メール認証ユーザーのみ対象）
+    user = db.query(User).filter(User.email == request.email, User.auth_provider == "email").first()
+    if not user:
+        # 既存情報の漏洩を防ぐため成功メッセージを返す
+        return {"success": True, "message": "リセット手順を送信しました（存在する場合）。"}
+
+    # 6桁コード生成・保存
+    reset_code = ''.join(secrets.choice('0123456789') for _ in range(6))
+    password_reset_codes[request.email] = {
+        'code': reset_code,
+        'user_id': user.id,
+        'expires': datetime.utcnow() + timedelta(minutes=10)
+    }
+
+    # 送信
+    sent = send_verification_email(request.email, reset_code, subject="パスワードリセット")
+    if not sent:
+        raise HTTPException(status_code=400, detail="メール送信に失敗しました")
+
+    return {"success": True, "message": "パスワードリセットコードを送信しました。メールをご確認ください。"}
+
+
+@router.post("/email/reset")
+async def email_reset(request: EmailResetRequest, db: Session = Depends(get_db)):
+    """リセットコードで新しいパスワードを設定"""
+    # コード存在確認
+    if request.email not in password_reset_codes:
+        raise HTTPException(status_code=400, detail="確認コードが見つかりません")
+
+    code_data = password_reset_codes[request.email]
+    # 有効期限
+    if datetime.utcnow() > code_data['expires']:
+        del password_reset_codes[request.email]
+        raise HTTPException(status_code=400, detail="確認コードの有効期限が切れています")
+
+    # 照合
+    if request.verification_code != code_data['code']:
+        raise HTTPException(status_code=400, detail="確認コードが正しくありません")
+
+    # ユーザー取得
+    user = db.query(User).filter(User.id == code_data['user_id']).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="ユーザーが見つかりません")
+
+    # パスワード更新
+    user.hashed_password = get_password_hash(request.new_password)
+    # リセット成功時はアクティブにしておく
+    if user.is_active != "active":
+        user.is_active = "active"
+    db.commit()
+
+    # コード破棄
+    del password_reset_codes[request.email]
+
+    return {"success": True, "message": "パスワードを更新しました。ログインしてください。"}
 
 @router.get("/me", response_model=AuthResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
