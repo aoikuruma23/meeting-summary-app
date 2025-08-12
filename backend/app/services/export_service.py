@@ -7,6 +7,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -57,6 +58,23 @@ class ExportService:
             # 利用可能なフォントを確認
             print(f"利用可能なフォント: {pdfmetrics.getRegisteredFontNames()}")
             
+            # 1) まずはCIDフォント（組み込み）を登録して即時利用可能にする
+            #    これらは外部ファイル不要で、日本語の表示に十分
+            try:
+                pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+                self.japanese_font_name = 'HeiseiKakuGo-W5'
+                print("日本語CIDフォントを使用: HeiseiKakuGo-W5")
+                return
+            except Exception as e:
+                print(f"CIDフォント登録失敗(HeiseiKakuGo-W5): {e}")
+            try:
+                pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+                self.japanese_font_name = 'HeiseiMin-W3'
+                print("日本語CIDフォントを使用: HeiseiMin-W3")
+                return
+            except Exception as e:
+                print(f"CIDフォント登録失敗(HeiseiMin-W3): {e}")
+            
             # システムフォントの詳細調査
             print("=== システムフォント詳細調査 ===")
             try:
@@ -93,15 +111,14 @@ class ExportService:
             
             # 日本語フォントの優先順位
             japanese_fonts = [
-                'HeiseiMin-W3',  # macOS/Linux
-                'HeiseiKakuGo-W5',  # macOS/Linux
-                'HiraginoSansGB-W3',  # macOS
-                'YuGo-Medium',  # macOS
-                'IPAexGothic',  # Linux
-                'TakaoGothic',  # Linux
-                'VL-Gothic-Regular',  # Linux
-                'NotoSansCJK-Regular',  # Google Fonts
-                'SourceHanSans-Regular'  # Adobe Fonts
+                'IPAexGothic',
+                'IPAexMincho',
+                'TakaoGothic',
+                'VL-Gothic-Regular',
+                'NotoSansCJK-Regular',
+                'NotoSansCJKjp-Regular',
+                'NotoSansJP-Regular',
+                'SourceHanSans-Regular'
             ]
             
             # 利用可能な日本語フォントを探す
@@ -121,13 +138,17 @@ class ExportService:
                 try:
                     # 複数の日本語フォントファイルを試行
                     font_files = [
-                        os.path.join("fonts", "BIZ-UDGothicR.ttc"),  # 新しく追加した日本語フォント（最優先）
-                        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",  # Ubuntu
-                        "/usr/share/fonts/opentype/ipafont-gothic/IPAGothic.ttf",  # CentOS/RHEL
+                        os.path.join("fonts", "BIZ-UDGothicR.ttc"),
+                        "/usr/share/fonts/truetype/ipafont-gothic/ipag.ttf",
+                        "/usr/share/fonts/truetype/ipafont-mincho/ipam.ttf",
+                        "/usr/share/fonts/opentype/ipafont-gothic/IPAGothic.ttf",
                         "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",  # macOS
                         "/Library/Fonts/Arial Unicode MS.ttf",  # macOS
-                        os.path.join("fonts", "NotoSansCJK-Regular.ttc"),  # カスタムフォント
-                        os.path.join("fonts", "NotoSansJP-Regular.otf")   # カスタムフォント
+                        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                        "/usr/share/fonts/opentype/noto/NotoSansCJKjp-Regular.otf",
+                        "/usr/share/fonts/truetype/noto/NotoSansJP-Regular.ttf",
+                        os.path.join("fonts", "NotoSansCJK-Regular.ttc"),
+                        os.path.join("fonts", "NotoSansJP-Regular.otf")
                     ]
                     
                     font_registered = False
@@ -202,12 +223,24 @@ class ExportService:
                                     continue
                     
                     if not font_registered:
-                        # 最後の手段: デフォルトフォントを使用し、日本語文字を置換
-                        available_font = 'Helvetica'
-                        print(f"日本語フォントの埋め込みに失敗したため、デフォルトフォントを使用: {available_font}")
-                        print("警告: 日本語文字は正しく表示されない可能性があります")
-                        
-                        # 日本語フォントが利用できない場合はエラーを発生
+                        # 最後の手段: CIDフォントをもう一度試す
+                        try:
+                            pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+                            available_font = 'HeiseiKakuGo-W5'
+                            font_registered = True
+                            print("フォールバックでCIDフォントを使用: HeiseiKakuGo-W5")
+                        except Exception:
+                            pass
+                        if not font_registered:
+                            try:
+                                pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+                                available_font = 'HeiseiMin-W3'
+                                font_registered = True
+                                print("フォールバックでCIDフォントを使用: HeiseiMin-W3")
+                            except Exception:
+                                pass
+                    
+                    if not font_registered:
                         raise Exception("日本語フォントが利用できません。PDFの日本語表示ができません。")
                         
                 except Exception as embed_error:
@@ -220,11 +253,13 @@ class ExportService:
                 self.japanese_font_name = available_font
                 print(f"日本語フォント設定完了: {available_font}")
             else:
-                # フォールバック: デフォルトフォントを使用
-                self.japanese_font_name = 'Helvetica'
-                print(f"日本語フォントが見つからないため、デフォルトフォントを使用: {self.japanese_font_name}")
-                print("エラー: 日本語フォントが利用できません。PDFの日本語表示ができません。")
-                raise Exception("日本語フォントが利用できません。PDFの日本語表示ができません。")
+                # 念のためのフォールバック
+                self.japanese_font_name = 'HeiseiKakuGo-W5'
+                try:
+                    pdfmetrics.registerFont(UnicodeCIDFont(self.japanese_font_name))
+                    print(f"CIDフォントにフォールバック: {self.japanese_font_name}")
+                except Exception:
+                    raise Exception("日本語フォントが利用できません。PDFの日本語表示ができません。")
                 
         except Exception as e:
             print(f"日本語フォント設定エラー: {e}")
