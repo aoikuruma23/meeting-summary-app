@@ -152,8 +152,9 @@ class BillingService:
                     'return_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/billing',
                 }
                 # ライブモードでデフォルト設定が未保存な場合は、明示的に configuration を指定
-                if settings.STRIPE_PORTAL_CONFIGURATION_ID:
-                    create_kwargs['configuration'] = settings.STRIPE_PORTAL_CONFIGURATION_ID.strip()
+                config_id = self._get_or_create_portal_configuration_id()
+                if config_id:
+                    create_kwargs['configuration'] = config_id
                 session = stripe.billing_portal.Session.create(**create_kwargs)
             except stripe.error.StripeError as se:
                 message = getattr(se, 'user_message', None) or str(se)
@@ -177,6 +178,41 @@ class BillingService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"ポータルセッションの作成に失敗しました: {str(e)}"
             )
+
+    def _get_or_create_portal_configuration_id(self) -> Optional[str]:
+        """ポータル設定IDを取得。なければ1件作成してIDを返す（失敗時はNone）。"""
+        try:
+            # 環境変数の優先
+            if settings.STRIPE_PORTAL_CONFIGURATION_ID:
+                return settings.STRIPE_PORTAL_CONFIGURATION_ID.strip()
+
+            # 既存設定を検索（最新1件）
+            conf_list = stripe.billing_portal.Configuration.list(limit=1)
+            data = getattr(conf_list, 'data', []) or []
+            if len(data) > 0 and data[0].get('id'):
+                return data[0]['id']
+
+            # なければ最小構成で作成
+            created = stripe.billing_portal.Configuration.create(
+                business_profile={
+                    'privacy_policy_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/privacy',
+                    'terms_of_service_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/terms',
+                },
+                features={
+                    'invoice_history': {'enabled': True},
+                    'payment_method_update': {'enabled': True},
+                    'subscription_cancel': {'enabled': True},
+                    'subscription_update': {'enabled': True},
+                    'customer_update': {
+                        'allowed_updates': ['address', 'email', 'name', 'phone'],
+                        'enabled': True,
+                    },
+                },
+            )
+            return getattr(created, 'id', None)
+        except Exception as e:
+            print(f"DEBUG: portal configuration resolve/create failed: {e}")
+        return None
     
     def get_subscription_status(self, user: User, db: Session) -> dict:
         """サブスクリプション状態を取得"""
