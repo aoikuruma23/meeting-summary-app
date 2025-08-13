@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.core.config import settings
 from typing import Optional
+from datetime import datetime
+import hashlib
 
 # Stripeの初期化
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -20,6 +22,16 @@ class BillingService:
                 # 顧客IDを取得または作成
                 customer_id = self._get_or_create_customer(user, db)
                 
+                # unit_amount は最小通貨単位の整数（JPY は円単位）。環境値は文字列のため int へ変換
+                try:
+                    unit_amount = int(settings.MONTHLY_PRICE)
+                except Exception:
+                    unit_amount = 999
+
+                # Idempotency-Key（同一リクエストの重複作成防止）
+                raw_key = f"checkout_{user.id}_{plan_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+                idem_key = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
+
                 # チェックアウトセッションを作成
                 session = stripe.checkout.Session.create(
                     customer=customer_id,
@@ -31,7 +43,7 @@ class BillingService:
                                 'name': 'プレミアムプラン',
                                 'description': '無制限録音、PDF/Word出力、高度な要約機能',
                             },
-                            'unit_amount': settings.MONTHLY_PRICE,
+                            'unit_amount': unit_amount,
                             'recurring': {
                                 'interval': 'month',
                             },
@@ -44,7 +56,8 @@ class BillingService:
                     metadata={
                         'user_id': str(user.id),
                         'plan_id': plan_id
-                    }
+                    },
+                    idempotency_key=idem_key
                 )
                 
                 return {
@@ -79,9 +92,13 @@ class BillingService:
                     detail="サブスクリプションが見つかりません"
                 )
             
+            raw_key = f"portal_{user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+            idem_key = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
+
             session = stripe.billing_portal.Session.create(
                 customer=user.stripe_customer_id,
                 return_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing',
+                idempotency_key=idem_key
             )
             
             return {
