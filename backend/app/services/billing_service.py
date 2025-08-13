@@ -28,13 +28,11 @@ class BillingService:
                 except Exception:
                     unit_amount = 999
 
-                # Idempotency-Key（同一リクエストの重複作成防止）
-                raw_key = f"checkout_{user.id}_{plan_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
-                idem_key = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
+                # Idempotency-Key は一旦未使用（ライブラリ互換性の切り分けのため）
 
                 # 可能ならStripeのPrice IDを利用（推奨）
                 if settings.STRIPE_PRICE_ID:
-                    print(f"DEBUG: Using STRIPE_PRICE_ID: {settings.STRIPE_PRICE_ID}, customer: {customer_id}")
+                    print(f"DEBUG: Using STRIPE_PRICE_ID (len={len(settings.STRIPE_PRICE_ID)}): {settings.STRIPE_PRICE_ID}")
                     session = stripe.checkout.Session.create(
                         customer=customer_id,
                         line_items=[{
@@ -44,11 +42,10 @@ class BillingService:
                         mode='subscription',
                         success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
                         cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
-                        metadata={'user_id': str(user.id), 'plan_id': plan_id},
-                        idempotency_key=idem_key
+                        metadata={'user_id': str(user.id), 'plan_id': plan_id}
                     )
                 else:
-                    print(f"DEBUG: Using price_data unit_amount={unit_amount}, customer: {customer_id}")
+                    print(f"DEBUG: Using price_data unit_amount={unit_amount}")
                     session = stripe.checkout.Session.create(
                         customer=customer_id,
                         line_items=[{
@@ -66,8 +63,7 @@ class BillingService:
                         mode='subscription',
                         success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
                         cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
-                        metadata={'user_id': str(user.id), 'plan_id': plan_id},
-                        idempotency_key=idem_key
+                        metadata={'user_id': str(user.id), 'plan_id': plan_id}
                     )
                 
                 return {
@@ -96,7 +92,8 @@ class BillingService:
                 detail=f"Stripeエラー: {message}"
             )
         except Exception as e:
-            print(f"ERROR: checkout.create unexpected error: {e}")
+            import traceback
+            print(f"ERROR: checkout.create unexpected error: {e}\n{traceback.format_exc()}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"チェックアウトセッションの作成に失敗しました: {str(e)}"
