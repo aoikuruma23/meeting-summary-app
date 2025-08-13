@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     # 課金設定
     FREE_TRIAL_DAYS: str = "31"
     FREE_USAGE_LIMIT: str = "10"
-    MONTHLY_PRICE: str = "980"
+    MONTHLY_PRICE: str = "999"
     
     # 機能設定
     DUMMY_LOGIN_ENABLED: str = "true"

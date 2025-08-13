@@ -39,8 +39,8 @@ class BillingService:
                         'quantity': 1,
                     }],
                     mode='subscription',
-                    success_url='https://meeting-summary-app.onrender.com/billing?success=true',
-                    cancel_url='https://meeting-summary-app.onrender.com/billing?canceled=true',
+                    success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
+                    cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
                     metadata={
                         'user_id': str(user.id),
                         'plan_id': plan_id
@@ -60,7 +60,7 @@ class BillingService:
                     "success": True,
                     "message": "無料プランにアクセスしました",
                     "data": {
-                        "url": "https://meeting-summary-app.onrender.com/"
+                        "url": "https://meeting-summary-app.jibunkaikaku-lab.com/"
                     }
                 }
                 
@@ -81,7 +81,7 @@ class BillingService:
             
             session = stripe.billing_portal.Session.create(
                 customer=user.stripe_customer_id,
-                return_url='https://meeting-summary-app.onrender.com/billing',
+                return_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing',
             )
             
             return {
