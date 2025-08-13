@@ -481,10 +481,34 @@ class BillingService:
                 return
             
             # サブスクリプション状態を更新
-            if subscription.status == 'active':
+            cancel_at_period_end = bool(getattr(subscription, 'cancel_at_period_end', False) if not isinstance(subscription, dict) else subscription.get('cancel_at_period_end', False))
+            status = getattr(subscription, 'status', None) if not isinstance(subscription, dict) else subscription.get('status')
+
+            # 基本の状態反映
+            if status == 'active':
                 user.is_premium = "true"
-            elif subscription.status in ['canceled', 'unpaid']:
+            elif status in ['canceled', 'unpaid']:  # deleted/未払いは即時ダウングレード
                 user.is_premium = "false"
+
+            # 追加ロジック: 期末キャンセルだが未課金 or 直後のキャンセルは即時ダウングレード
+            if cancel_at_period_end:
+                immediate_downgrade = False
+                # 最新請求の支払い状況を確認
+                latest_invoice_id = getattr(subscription, 'latest_invoice', None) if not isinstance(subscription, dict) else subscription.get('latest_invoice')
+                try:
+                    if latest_invoice_id:
+                        inv = stripe.Invoice.retrieve(latest_invoice_id)
+                        paid = inv.get('paid') if isinstance(inv, dict) else getattr(inv, 'paid', False)
+                        amount_paid = inv.get('amount_paid') if isinstance(inv, dict) else getattr(inv, 'amount_paid', 0)
+                        status_inv = inv.get('status') if isinstance(inv, dict) else getattr(inv, 'status', None)
+                        if (not paid) or (status_inv != 'paid') or (int(amount_paid or 0) == 0):
+                            immediate_downgrade = True
+                except Exception as _:
+                    pass
+                if immediate_downgrade:
+                    user.is_premium = "false"
+                    db.commit()
+                    print(f"DEBUG: Immediate downgrade applied (cancel_at_period_end with no payment or very recent cancel) - user_id: {user.id}")
             
             db.commit()
             print(f"DEBUG: サブスクリプション更新 - user_id: {user.id}, status: {subscription.status}")
