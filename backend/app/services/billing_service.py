@@ -149,7 +149,8 @@ class BillingService:
             try:
                 create_kwargs = {
                     'customer': user.stripe_customer_id,
-                    'return_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/billing',
+                    # ルーティング不整合を避けるため、確実に存在するトップへ戻す
+                    'return_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/',
                 }
                 # ライブモードでデフォルト設定が未保存な場合は、明示的に configuration を指定
                 config_id = self._get_or_create_portal_configuration_id()
@@ -242,7 +243,7 @@ class BillingService:
                     'subscription_update': {
                         'enabled': True,
                         # 必須: 許可する更新項目を指定（Stripe要件）
-                        'default_allowed_updates': ['price', 'quantity', 'trial_end'],
+                        'default_allowed_updates': ['price', 'quantity'],
                         # 必須: 更新対象にできる製品を指定
                         'products': products_param if products_param else [],
                     },
