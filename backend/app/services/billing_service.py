@@ -34,6 +34,7 @@ class BillingService:
 
                 # 可能ならStripeのPrice IDを利用（推奨）
                 if settings.STRIPE_PRICE_ID:
+                    print(f"DEBUG: Using STRIPE_PRICE_ID: {settings.STRIPE_PRICE_ID}, customer: {customer_id}")
                     session = stripe.checkout.Session.create(
                         customer=customer_id,
                         line_items=[{
@@ -47,6 +48,7 @@ class BillingService:
                         idempotency_key=idem_key
                     )
                 else:
+                    print(f"DEBUG: Using price_data unit_amount={unit_amount}, customer: {customer_id}")
                     session = stripe.checkout.Session.create(
                         customer=customer_id,
                         line_items=[{
@@ -85,7 +87,16 @@ class BillingService:
                     }
                 }
                 
+        except stripe.error.StripeError as se:
+            # Stripeの詳細エラーを返す
+            message = getattr(se, 'user_message', None) or str(se)
+            print(f"ERROR: StripeError in checkout.create: {message}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Stripeエラー: {message}"
+            )
         except Exception as e:
+            print(f"ERROR: checkout.create unexpected error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"チェックアウトセッションの作成に失敗しました: {str(e)}"
