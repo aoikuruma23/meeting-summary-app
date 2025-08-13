@@ -12,8 +12,9 @@ services:
       echo "=== インストールされた日本語フォント ==="
       fc-list :lang=ja | head -20
       echo "=== フォントインストール完了 ==="
-      # Pythonパッケージのインストール
-      pip install -r backend/requirements.txt
+      # Pythonパッケージのインストール（キャッシュ無効化・強制再インストールで旧版を確実に排除）
+      pip uninstall -y stripe || true
+      pip install --upgrade --force-reinstall --no-cache-dir -r backend/requirements.txt
     startCommand: cd backend && python main.py
     envVars:
       - key: PYTHON_VERSION

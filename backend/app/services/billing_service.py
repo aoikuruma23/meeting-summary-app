@@ -9,6 +9,13 @@ import hashlib
 
 # Stripeの初期化
 stripe.api_key = settings.STRIPE_SECRET_KEY
+# APIバージョンを明示（SDK/バックエンド互換の安定版）
+try:
+    # 明示固定で apps/objects 解決の不整合を回避
+    stripe.api_version = "2024-06-20"
+except Exception:
+    pass
+print(f"DEBUG: Stripe SDK version: {getattr(stripe, '__version__', 'unknown')}, api_version: {getattr(stripe, 'api_version', 'unset')}")
 
 class BillingService:
     def __init__(self):
