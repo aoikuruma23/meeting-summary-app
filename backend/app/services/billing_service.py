@@ -15,7 +15,25 @@ try:
     stripe.api_version = "2024-06-20"
 except Exception:
     pass
-print(f"DEBUG: Stripe SDK version: {getattr(stripe, '__version__', 'unknown')}, api_version: {getattr(stripe, 'api_version', 'unset')}")
+# 一時ワークアラウンド: 古いSDKで stripe.apps が None の場合に Secret 参照で落ちるのを回避
+try:
+    if getattr(stripe, 'apps', None) is None:
+        class _DummySecret:
+            OBJECT_NAME = 'apps.secret'
+        class _DummyApps:
+            pass
+        stripe.apps = _DummyApps()
+        setattr(stripe.apps, 'Secret', _DummySecret)
+        print("DEBUG: Applied dummy stripe.apps.Secret workaround")
+except Exception as e:
+    print(f"DEBUG: stripe.apps workaround error: {e}")
+try:
+    # 事前に _object_classes を読み込んでマッピングを確定させる
+    import stripe._object_classes  # type: ignore
+    print("DEBUG: stripe._object_classes imported successfully")
+except Exception as e:
+    print(f"DEBUG: stripe._object_classes import error: {e}")
+print(f"DEBUG: Stripe SDK version: {getattr(stripe, '__version__', 'unknown')}, api_version: {getattr(stripe, 'api_version', 'unset')}, apps_is_none: {getattr(stripe, 'apps', None) is None}")
 
 class BillingService:
     def __init__(self):
