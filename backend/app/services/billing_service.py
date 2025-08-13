@@ -241,6 +241,8 @@ class BillingService:
                     'subscription_cancel': {'enabled': True},
                     'subscription_update': {
                         'enabled': True,
+                        # 必須: 許可する更新項目を指定（Stripe要件）
+                        'default_allowed_updates': ['price', 'quantity', 'trial_end'],
                         # 必須: 更新対象にできる製品を指定
                         'products': products_param if products_param else [],
                     },
