@@ -144,14 +144,20 @@ class BillingService:
                     detail="サブスクリプションが見つかりません"
                 )
             
-            raw_key = f"portal_{user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
-            idem_key = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
-
-            session = stripe.billing_portal.Session.create(
-                customer=user.stripe_customer_id,
-                return_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing',
-                idempotency_key=idem_key
-            )
+            print(f"DEBUG: Create portal for customer: {user.stripe_customer_id}")
+            # idempotency_key は相性問題を避けるため一旦外す
+            try:
+                session = stripe.billing_portal.Session.create(
+                    customer=user.stripe_customer_id,
+                    return_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing',
+                )
+            except stripe.error.StripeError as se:
+                message = getattr(se, 'user_message', None) or str(se)
+                print(f"ERROR: StripeError in portal.create: {message}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stripeエラー: {message}"
+                )
             
             return {
                 "success": True,
@@ -162,6 +168,7 @@ class BillingService:
             }
             
         except Exception as e:
+            print(f"ERROR: portal.create unexpected error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"ポータルセッションの作成に失敗しました: {str(e)}"
