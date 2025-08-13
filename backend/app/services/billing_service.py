@@ -196,17 +196,23 @@ class BillingService:
             # NOTE: subscription_update を有効にする場合は products の指定が必須（Stripe要件）
             #       products には「プランの product ID」を指定する必要がある
             product_id: Optional[str] = None
+            price_id: Optional[str] = None
             try:
                 if settings.STRIPE_PRICE_ID:
-                    price_obj = stripe.Price.retrieve(settings.STRIPE_PRICE_ID.strip())
+                    price_id = settings.STRIPE_PRICE_ID.strip()
+                    price_obj = stripe.Price.retrieve(price_id)
                     product_id = price_obj.get('product') if isinstance(price_obj, dict) else getattr(price_obj, 'product', None)
-                    print(f"DEBUG: Resolved product_id from price: {product_id}")
+                    print(f"DEBUG: Resolved product_id from price: {product_id}, price_id: {price_id}")
             except Exception as e:
                 print(f"DEBUG: Failed to resolve product from price: {e}")
 
             products_param = []
             if product_id:
-                products_param = [{ 'product': product_id }]
+                # 価格IDが分かっている場合は prices も指定（Stripe要件）
+                entry = {'product': product_id}
+                if price_id:
+                    entry['prices'] = [price_id]
+                products_param = [entry]
             else:
                 # 価格IDが未設定の場合は、最新の有効な価格から製品を推定
                 try:
@@ -214,9 +220,13 @@ class BillingService:
                     price_data = (getattr(price_list, 'data', []) or [])
                     if len(price_data) > 0:
                         pid = price_data[0].get('product')
+                        pid_price = price_data[0].get('id')
                         if pid:
-                            products_param = [{ 'product': pid }]
-                            print(f"DEBUG: Resolved product_id from price list: {pid}")
+                            entry = {'product': pid}
+                            if pid_price:
+                                entry['prices'] = [pid_price]
+                            products_param = [entry]
+                            print(f"DEBUG: Resolved product_id from price list: {pid}, price_id: {pid_price}")
                 except Exception as e:
                     print(f"DEBUG: Failed to resolve product from price list: {e}")
 
