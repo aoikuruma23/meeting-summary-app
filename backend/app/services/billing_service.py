@@ -32,18 +32,29 @@ class BillingService:
 
                 # 可能ならStripeのPrice IDを利用（推奨）
                 if settings.STRIPE_PRICE_ID:
-                    print(f"DEBUG: Using STRIPE_PRICE_ID (len={len(settings.STRIPE_PRICE_ID)}): {settings.STRIPE_PRICE_ID}")
-                    session = stripe.checkout.Session.create(
-                        customer=customer_id,
-                        line_items=[{
-                            'price': settings.STRIPE_PRICE_ID,
-                            'quantity': 1,
-                        }],
-                        mode='subscription',
-                        success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
-                        cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
-                        metadata={'user_id': str(user.id), 'plan_id': plan_id}
-                    )
+                    price_id = settings.STRIPE_PRICE_ID.strip()
+                    print(f"DEBUG: Using STRIPE_PRICE_ID: {price_id}")
+                    # 1st try: line_items（一般的）
+                    try:
+                        session = stripe.checkout.Session.create(
+                            customer=customer_id,
+                            line_items=[{'price': price_id, 'quantity': 1}],
+                            mode='subscription',
+                            success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
+                            cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
+                            metadata={'user_id': str(user.id), 'plan_id': plan_id}
+                        )
+                    except stripe.error.StripeError as se:
+                        # 2nd try: subscription_data.items（APIバージョン差異の回避）
+                        print(f"WARN: line_items failed: {getattr(se, 'user_message', None) or str(se)}; retry with subscription_data.items")
+                        session = stripe.checkout.Session.create(
+                            customer=customer_id,
+                            subscription_data={'items': [{'price': price_id, 'quantity': 1}]},
+                            mode='subscription',
+                            success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
+                            cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
+                            metadata={'user_id': str(user.id), 'plan_id': plan_id}
+                        )
                 else:
                     print(f"DEBUG: Using price_data unit_amount={unit_amount}")
                     session = stripe.checkout.Session.create(
