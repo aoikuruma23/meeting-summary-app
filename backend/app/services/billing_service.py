@@ -32,33 +32,41 @@ class BillingService:
                 raw_key = f"checkout_{user.id}_{plan_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
                 idem_key = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
 
-                # チェックアウトセッションを作成
-                session = stripe.checkout.Session.create(
-                    customer=customer_id,
-                    payment_method_types=['card'],
-                    line_items=[{
-                        'price_data': {
-                            'currency': 'jpy',
-                            'product_data': {
-                                'name': 'プレミアムプラン',
-                                'description': '無制限録音、PDF/Word出力、高度な要約機能',
+                # 可能ならStripeのPrice IDを利用（推奨）
+                if settings.STRIPE_PRICE_ID:
+                    session = stripe.checkout.Session.create(
+                        customer=customer_id,
+                        line_items=[{
+                            'price': settings.STRIPE_PRICE_ID,
+                            'quantity': 1,
+                        }],
+                        mode='subscription',
+                        success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
+                        cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
+                        metadata={'user_id': str(user.id), 'plan_id': plan_id},
+                        idempotency_key=idem_key
+                    )
+                else:
+                    session = stripe.checkout.Session.create(
+                        customer=customer_id,
+                        line_items=[{
+                            'price_data': {
+                                'currency': 'jpy',
+                                'product_data': {
+                                    'name': 'プレミアムプラン',
+                                    'description': '無制限録音、PDF/Word出力、高度な要約機能',
+                                },
+                                'unit_amount': unit_amount,
+                                'recurring': { 'interval': 'month' },
                             },
-                            'unit_amount': unit_amount,
-                            'recurring': {
-                                'interval': 'month',
-                            },
-                        },
-                        'quantity': 1,
-                    }],
-                    mode='subscription',
-                    success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
-                    cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
-                    metadata={
-                        'user_id': str(user.id),
-                        'plan_id': plan_id
-                    },
-                    idempotency_key=idem_key
-                )
+                            'quantity': 1,
+                        }],
+                        mode='subscription',
+                        success_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?success=true',
+                        cancel_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing?canceled=true',
+                        metadata={'user_id': str(user.id), 'plan_id': plan_id},
+                        idempotency_key=idem_key
+                    )
                 
                 return {
                     "success": True,

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_PRICE_ID: str = os.getenv("STRIPE_PRICE_ID", "")
     
     # 暗号化設定
     ENCRYPTION_KEY: str = "your-encryption-key-here"
