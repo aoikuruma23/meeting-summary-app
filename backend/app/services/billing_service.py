@@ -147,10 +147,14 @@ class BillingService:
             print(f"DEBUG: Create portal for customer: {user.stripe_customer_id}")
             # idempotency_key は相性問題を避けるため一旦外す
             try:
-                session = stripe.billing_portal.Session.create(
-                    customer=user.stripe_customer_id,
-                    return_url='https://meeting-summary-app.jibunkaikaku-lab.com/billing',
-                )
+                create_kwargs = {
+                    'customer': user.stripe_customer_id,
+                    'return_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/billing',
+                }
+                # ライブモードでデフォルト設定が未保存な場合は、明示的に configuration を指定
+                if settings.STRIPE_PORTAL_CONFIGURATION_ID:
+                    create_kwargs['configuration'] = settings.STRIPE_PORTAL_CONFIGURATION_ID.strip()
+                session = stripe.billing_portal.Session.create(**create_kwargs)
             except stripe.error.StripeError as se:
                 message = getattr(se, 'user_message', None) or str(se)
                 print(f"ERROR: StripeError in portal.create: {message}")
