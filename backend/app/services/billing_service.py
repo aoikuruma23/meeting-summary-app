@@ -193,6 +193,33 @@ class BillingService:
                 return data[0]['id']
 
             # なければ最小構成で作成
+            # NOTE: subscription_update を有効にする場合は products の指定が必須（Stripe要件）
+            #       products には「プランの product ID」を指定する必要がある
+            product_id: Optional[str] = None
+            try:
+                if settings.STRIPE_PRICE_ID:
+                    price_obj = stripe.Price.retrieve(settings.STRIPE_PRICE_ID.strip())
+                    product_id = price_obj.get('product') if isinstance(price_obj, dict) else getattr(price_obj, 'product', None)
+                    print(f"DEBUG: Resolved product_id from price: {product_id}")
+            except Exception as e:
+                print(f"DEBUG: Failed to resolve product from price: {e}")
+
+            products_param = []
+            if product_id:
+                products_param = [{ 'product': product_id }]
+            else:
+                # 価格IDが未設定の場合は、最新の有効な価格から製品を推定
+                try:
+                    price_list = stripe.Price.list(active=True, limit=1)
+                    price_data = (getattr(price_list, 'data', []) or [])
+                    if len(price_data) > 0:
+                        pid = price_data[0].get('product')
+                        if pid:
+                            products_param = [{ 'product': pid }]
+                            print(f"DEBUG: Resolved product_id from price list: {pid}")
+                except Exception as e:
+                    print(f"DEBUG: Failed to resolve product from price list: {e}")
+
             created = stripe.billing_portal.Configuration.create(
                 business_profile={
                     'privacy_policy_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/privacy',
@@ -202,7 +229,11 @@ class BillingService:
                     'invoice_history': {'enabled': True},
                     'payment_method_update': {'enabled': True},
                     'subscription_cancel': {'enabled': True},
-                    'subscription_update': {'enabled': True},
+                    'subscription_update': {
+                        'enabled': True,
+                        # 必須: 更新対象にできる製品を指定
+                        'products': products_param if products_param else [],
+                    },
                     'customer_update': {
                         'allowed_updates': ['address', 'email', 'name', 'phone'],
                         'enabled': True,
