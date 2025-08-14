@@ -77,13 +77,13 @@ const Header: React.FC = () => {
       // フォールバック: ブラウザごとの手順を案内
       const ua = navigator.userAgent.toLowerCase()
       if (ua.includes('edg')) {
-        alert('インストール手順:\n1. 右上の「…」→ アプリ → このサイトをインストール')
+        alert('デスクトップに追加する手順:\n1. 右上の「…」→ アプリ → このサイトをインストール')
       } else if (ua.includes('chrome')) {
-        alert('インストール手順:\n1. アドレスバー右端の「インストール」アイコンをクリック\n   もしくは 右上「⋮」→ インストール')
+        alert('デスクトップに追加する手順:\n1. アドレスバー右端の「インストール」アイコンをクリック\n   もしくは 右上「⋮」→ インストール')
       } else if (ua.includes('safari') && !ua.includes('chrome')) {
-        alert('インストール手順:\n1. 共有アイコン → ホーム画面に追加')
+        alert('ホーム画面に追加する手順:\n1. 共有アイコン → ホーム画面に追加')
       } else {
-        alert('インストール手順:\nブラウザのメニューから「インストール」または「ホーム画面に追加」を選択してください。')
+        alert('追加手順:\nブラウザのメニューから「インストール」または「ホーム画面に追加」を選択してください。')
       }
     } catch {}
   }
@@ -111,7 +111,11 @@ const Header: React.FC = () => {
               <Link to="/settings" className="nav-link" onClick={scrollToTop}>設定</Link>
               <Link to="/help" className="nav-link" onClick={scrollToTop}>ヘルプ</Link>
               {!isInstalled && (
-                <button className="install-btn" onClick={handleInstall}>{installLabel}</button>
+                deferredPrompt ? (
+                  <button className="install-btn" onClick={handleInstall}>{installLabel}</button>
+                ) : (
+                  <button className="install-btn" onClick={handleInstall}>{installLabel}の手順</button>
+                )
               )}
               <div className="user-info">
                 <span className="user-name">{user.name}</span>
@@ -122,7 +126,11 @@ const Header: React.FC = () => {
             ) : (
             <>
               {!isInstalled && (
-                <button className="install-btn" onClick={handleInstall}>{installLabel}</button>
+                deferredPrompt ? (
+                  <button className="install-btn" onClick={handleInstall}>{installLabel}</button>
+                ) : (
+                  <button className="install-btn" onClick={handleInstall}>{installLabel}の手順</button>
+                )
               )}
               <Link to="/login" className="nav-link" onClick={scrollToTop}>ログイン</Link>
             </>
