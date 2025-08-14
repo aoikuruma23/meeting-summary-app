@@ -160,30 +160,7 @@ const Login: React.FC = () => {
     }
   }
 
-  const handleDummyLogin = async () => {
-    setIsLoading(true)
-    setError('')
-
-    try {
-      // ダミーユーザーでログイン
-      const dummyUser = {
-        id: 1,
-        email: 'dummy@example.com',
-        name: 'テストユーザー',
-        is_premium: 'true'
-      }
-      
-      const dummyToken = 'dummy_token_' + Date.now()
-      
-      await login(dummyToken, dummyUser)
-      navigate('/')
-    } catch (err) {
-      console.error('ダミーログインエラー:', err)
-      setError('ダミーログインに失敗しました')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  
 
   return (
     <div className="login-container">
@@ -341,14 +318,7 @@ const Login: React.FC = () => {
             LINEでログイン
           </button>
           
-          <button
-            onClick={handleDummyLogin}
-            disabled={isLoading}
-            className="btn btn-dummy"
-          >
-            <span className="icon">🧪</span>
-            ダミーログイン（テスト用）
-          </button>
+          {/* ダミーログインは無効化 */}
         </div>
         
         {/* 登録/ログイン切り替え */}
