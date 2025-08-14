@@ -105,6 +105,8 @@ def delete_user(db, email: str, purge_meetings: bool) -> None:
         for m in meetings:
             db.delete(m)
         print(f"✓ 議事録削除: {len(meetings)} 件")
+        # 先にコミットしてFK制約違反を回避
+        db.commit()
 
     db.delete(user)
     db.commit()
