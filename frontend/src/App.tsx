@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import './App.css'
 
 import Header from './components/Header'
@@ -16,10 +17,23 @@ import TermsOfService from './pages/TermsOfService'
 import AuthCallback from './pages/AuthCallback'
 import EmailVerification from './pages/EmailVerification'
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    } catch {
+      window.scrollTo(0, 0)
+    }
+  }, [pathname, search])
+  return null
+}
+
 function App() {
   return (
     <div className="App">
       <Header />
+      <ScrollToTop />
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Home />} />

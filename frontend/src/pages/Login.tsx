@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { authService } from '../services/authService'
@@ -20,6 +20,15 @@ const Login: React.FC = () => {
   const [newPassword, setNewPassword] = useState('')
   const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  // ページ表示時に最上部へスクロール
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    } catch {
+      window.scrollTo(0, 0)
+    }
+  }, [])
 
   const handleGoogleLogin = async () => {
     console.log('DEBUG: Googleログインボタンがクリックされました')

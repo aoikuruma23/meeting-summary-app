@@ -7,35 +7,44 @@ const Header: React.FC = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    } catch {
+      window.scrollTo(0, 0)
+    }
+  }
+
   const handleLogout = () => {
     logout()
+    scrollToTop()
     navigate('/login')
   }
 
   return (
     <header className="header">
       <div className="header-container">
-        <Link to="/" className="header-logo">
+        <Link to="/" className="header-logo" onClick={scrollToTop}>
           <h1>議事録要約</h1>
         </Link>
         
         <nav className="header-nav">
           {user ? (
             <>
-              <Link to="/" className="nav-link">ホーム</Link>
-              <Link to="/recording" className="nav-link">録音</Link>
-              <Link to="/history" className="nav-link">履歴</Link>
-              <Link to="/billing" className="nav-link">プラン</Link>
-              <Link to="/settings" className="nav-link">設定</Link>
-              <Link to="/help" className="nav-link">ヘルプ</Link>
+              <Link to="/" className="nav-link" onClick={scrollToTop}>ホーム</Link>
+              <Link to="/recording" className="nav-link" onClick={scrollToTop}>録音</Link>
+              <Link to="/history" className="nav-link" onClick={scrollToTop}>履歴</Link>
+              <Link to="/billing" className="nav-link" onClick={scrollToTop}>プラン</Link>
+              <Link to="/settings" className="nav-link" onClick={scrollToTop}>設定</Link>
+              <Link to="/help" className="nav-link" onClick={scrollToTop}>ヘルプ</Link>
               <div className="user-info">
                 <span className="user-name">{user.name}</span>
                 {user.is_premium === 'true' && <span className="premium-badge">プレミアム</span>}
                 <button onClick={handleLogout} className="logout-btn">ログアウト</button>
               </div>
             </>
-          ) : (
-            <Link to="/login" className="nav-link">ログイン</Link>
+            ) : (
+            <Link to="/login" className="nav-link" onClick={scrollToTop}>ログイン</Link>
           )}
         </nav>
       </div>
