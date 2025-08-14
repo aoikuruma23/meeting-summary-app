@@ -57,7 +57,7 @@ async def create_portal_session(
     """Stripeカスタマーポータルセッションを作成"""
     try:
         # ポータルセッション作成
-        result = billing_service.create_portal_session(current_user)
+        result = billing_service.create_portal_session(current_user, db)
         
         return result
         

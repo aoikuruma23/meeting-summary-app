@@ -135,20 +135,27 @@ class BillingService:
                 detail=f"チェックアウトセッションの作成に失敗しました: {str(e)}"
             )
     
-    def create_portal_session(self, user: User) -> dict:
+    def create_portal_session(self, user: User, db: Session) -> dict:
         """ポータルセッションを作成（サブスクリプション管理）"""
         try:
+            # 顧客IDが未登録でもポータルは作れるため、この場で作成して補完する
             if not user.stripe_customer_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="サブスクリプションが見つかりません"
-                )
-            
-            print(f"DEBUG: Create portal for customer: {user.stripe_customer_id}")
+                try:
+                    customer_id = self._get_or_create_customer(user, db)
+                    print(f"DEBUG: Created Stripe customer for portal: {customer_id}")
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Stripe顧客の作成に失敗しました: {str(e)}"
+                    )
+            else:
+                customer_id = user.stripe_customer_id
+
+            print(f"DEBUG: Create portal for customer: {customer_id}")
             # idempotency_key は相性問題を避けるため一旦外す
             try:
                 create_kwargs = {
-                    'customer': user.stripe_customer_id,
+                    'customer': customer_id,
                     # ルーティング不整合を避けるため、確実に存在するトップへ戻す
                     'return_url': 'https://meeting-summary-app.jibunkaikaku-lab.com/',
                 }
