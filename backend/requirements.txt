@@ -13,7 +13,7 @@ google-auth==2.23.4
 google-auth-oauthlib==1.1.0
 google-auth-httplib2==0.1.1
 google-api-python-client==2.108.0
-# Stripe SDK の既知不具合回避のため更新（apps.Secret 参照で落ちる問題）
+# Update stripe SDK to avoid known apps.Secret attribute issue on older SDKs
 stripe==11.4.1
 python-dotenv==1.0.0
 httpx==0.25.2
