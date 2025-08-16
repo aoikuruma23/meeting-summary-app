@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import './Settings.css'
 
 const Settings: React.FC = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   // 無料期間の残り日数を計算する関数
   const calculateTrialDaysRemaining = (trialStartDate: string | undefined) => {
     if (!trialStartDate || user?.is_premium === 'true') {
@@ -46,8 +48,8 @@ const Settings: React.FC = () => {
 
   const handleUpgrade = async () => {
     try {
-      // プランページにリダイレクト
-      window.location.href = '/billing'
+      // SPA 内遷移（フルリロードせず 404 を回避）
+      navigate('/billing')
     } catch (error) {
       console.error('アップグレードエラー:', error)
     }
