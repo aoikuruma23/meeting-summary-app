@@ -297,8 +297,8 @@ async def end_recording(
             print(f"要約処理エラー: {str(e)}")
             import traceback
             print(f"エラー詳細: {traceback.format_exc()}")
-            # エラーが発生してもステータスをcompletedに変更
-            meeting.status = "completed"
+            # エラー時はエラーステータスで保存（誤った完了表示を防止）
+            meeting.status = "error"
             db.commit()
         
         return RecordingResponse(
@@ -584,6 +584,7 @@ async def download_summary(
             )
         
         file_path = matching_files[0]  # 最初に見つかったファイルを使用
+        filename = os.path.basename(file_path)
         
         # ファイルを返す
         from fastapi.responses import FileResponse

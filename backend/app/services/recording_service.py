@@ -59,9 +59,10 @@ class RecordingService:
             # 1. 音声チャンクの文字起こし
             transcription_text = await self._transcribe_chunks(meeting_id, db)
             
-            if not transcription_text:
-                print("DEBUG: 文字起こしデータがありません。ダミー要約を生成します。")
-                transcription_text = "これはテスト用の文字起こしデータです。会議の内容を要約します。"
+            # 文字起こし結果が空の場合はダミー生成せずにエラー扱い
+            if not transcription_text or not transcription_text.strip():
+                print("DEBUG: 文字起こしデータが空です。要約を中止します。")
+                raise Exception("文字起こしデータが空です")
             
             # 2. 要約の生成
             summary = await self._generate_summary(transcription_text)
@@ -118,10 +119,14 @@ class RecordingService:
                     
                     # 通常の文字起こし
                     transcription_text = await self.whisper_service.transcribe(file_path)
-                    transcriptions.append(transcription_text)
+                    if transcription_text and transcription_text.strip():
+                        transcriptions.append(transcription_text)
+                        # チャンクに転写を保存
+                        chunk.transcription = transcription_text
                     
                     # トークン数を更新
-                    total_whisper_tokens += len(transcription_text.split())
+                    if transcription_text:
+                        total_whisper_tokens += len(transcription_text.split())
                     
                     # チャンクのステータスを更新
                     chunk.status = "transcribed"
@@ -136,10 +141,12 @@ class RecordingService:
         
         print(f"DEBUG: 文字起こし完了数: {len(transcriptions)}")
         
-        # 議事録のWhisperトークン数を更新
+        # 議事録のWhisperトークン数・全文転写を更新
         meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
         if meeting:
             meeting.whisper_tokens = total_whisper_tokens
+            full_transcript = "\n".join(transcriptions)
+            meeting.transcript = full_transcript
             db.commit()
         
         # 全文字起こしを結合

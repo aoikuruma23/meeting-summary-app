@@ -2,15 +2,16 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
+from app.core.config import settings
 
 load_dotenv()
 
 class SummaryService:
     def __init__(self):
-        api_key = os.getenv('OPENAI_API_KEY')
+        # 設定からAPIキーを取得（環境差異なく統一）
+        api_key = settings.OPENAI_API_KEY or os.getenv('OPENAI_API_KEY')
         if not api_key:
-            raise Exception('OPENAI_API_KEYが.envに設定されていません')
-        # APIキーから改行文字を除去
+            raise Exception('OPENAI_API_KEYが設定されていません')
         api_key = api_key.strip()
         self.client = OpenAI(api_key=api_key)
     
@@ -24,40 +25,42 @@ class SummaryService:
             if participants and len(participants) > 0:
                 participant_info = f"\n参加者: {', '.join(participants)}"
             
-            prompt = f"""以下の会議の転写テキストを要約してください。
+            prompt = f"""以下の会議の転写テキストを日本語で厳密に要約してください。転写テキストに含まれない情報は絶対に追加しないでください。仮定・推測・創作は禁止です。
 
 {participant_info}
 
 転写テキスト:
 {transcript}
 
-以下の形式で要約してください：
-
+出力形式:
 ## 会議概要
-- 主要な議題と決定事項
-- 重要なポイント
+- 主要な議題と決定事項（転写にある内容のみ）
+- 重要なポイント（転写にある内容のみ）
 
 ## アクションアイテム
-- 担当者と期限を含む具体的なタスク
+- 担当者と期限（転写にある場合のみ。なければ「記載なし」と書く）
 
 ## 次回の議題
-- 次回会議で取り上げる予定の項目
+- 次回会議で取り上げる予定（転写にある場合のみ。なければ「記載なし」と書く）
 
-要約は簡潔で実用的なものにしてください。"""
+注意: 事実は転写テキストのみに基づき、解釈や新規情報は書かないこと。"""
 
             print(f"ChatGPT API呼び出し開始...")
             
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "あなたは会議の要約を専門とするアシスタントです。転写テキストから重要な情報を抽出し、構造化された要約を作成してください。"},
+                    {"role": "system", "content": "あなたは会議の要約を専門とする日本語アシスタントです。転写にない情報を付け加えず、厳密に事実のみを構造化して出力します。"},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=1000,
-                temperature=0.3
+                temperature=0.2
             )
             
-            print(f"ChatGPT API応答: {response}")
+            # 必要以上の詳細ログは出さない（情報漏洩防止）
+            usage = getattr(response, 'usage', None)
+            if usage:
+                print(f"DEBUG: Chat usage - prompt_tokens={getattr(usage, 'prompt_tokens', 'n/a')}, completion_tokens={getattr(usage, 'completion_tokens', 'n/a')}, total_tokens={getattr(usage, 'total_tokens', 'n/a')}")
             
             summary = response.choices[0].message.content
             print(f"生成された要約: {summary}")
