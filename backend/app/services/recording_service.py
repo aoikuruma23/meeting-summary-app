@@ -48,9 +48,12 @@ class RecordingService:
             print(f"DEBUG: save_chunkエラー - {str(e)}")
             raise Exception(f"音声ファイルの保存に失敗しました: {str(e)}")
     
-    async def process_meeting(self, meeting_id: int, db: Session):
+    async def process_meeting(self, meeting_id: int, db: Optional[Session] = None):
         """議事録の処理（文字起こし・要約・保存）"""
         try:
+            # DB セッションを準備
+            if db is None:
+                db = next(get_db())
             # 議事録の確認
             meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
             if not meeting:

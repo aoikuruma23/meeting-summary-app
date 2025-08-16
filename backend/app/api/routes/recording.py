@@ -171,7 +171,7 @@ async def upload_chunk(
             )
         
         print(f"DEBUG: 議事録確認 - status: {meeting.status}")
-        if meeting.status not in ["recording", "completed", "processing"]:
+        if meeting.status not in ["recording", "completed", "processing", "error"]:
             print(f"DEBUG: 議事録ステータスエラー - status: {meeting.status}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,6 +216,24 @@ async def upload_chunk(
         db.add(chunk)
         db.commit()
         print(f"DEBUG: データベース保存完了 - chunk_id: {chunk.id}")
+
+        # もし既に /end 済み（status が processing もしくは error）の場合、
+        # 最初のチャンク受領時に要約処理を自動開始する
+        try:
+            import asyncio
+            uploaded_count = db.query(AudioChunk).filter(
+                AudioChunk.meeting_id == meeting_id,
+                AudioChunk.status == "uploaded"
+            ).count()
+            if meeting.status in ["processing", "error"] and uploaded_count >= 1:
+                # ステータスを processing に揃える
+                meeting.status = "processing"
+                db.commit()
+                print(f"DEBUG: 初回チャンク受領により要約処理を非同期開始 - meeting_id: {meeting_id}")
+                recording_service = RecordingService()
+                asyncio.create_task(recording_service.process_meeting(meeting_id, db))
+        except Exception as _:
+            pass
         
         return RecordingResponse(
             success=True,
@@ -281,17 +299,34 @@ async def end_recording(
         print(f"DEBUG: 利用回数を更新 - user_id: {user.id}, usage_count: {user.usage_count}")
         
         try:
-            # チャンクがアップロードされるまで少し待つ
+            # チャンクがアップロードされるまでポーリング（最大30秒）
             import asyncio
-            await asyncio.sleep(5)  # 待機時間を増加
-            
-            print(f"DEBUG: 要約処理開始 - meeting_id: {request.meeting_id}")
-            await recording_service.process_meeting(request.meeting_id, db)
-            print(f"DEBUG: 要約処理完了 - meeting_id: {request.meeting_id}")
-            
-            # ステータスを完了に変更
-            meeting.status = "completed"
-            db.commit()
+            print(f"DEBUG: アップロード済みチャンク待機開始 - meeting_id: {request.meeting_id}")
+            uploaded_count = 0
+            for i in range(30):
+                uploaded_count = db.query(AudioChunk).filter(
+                    AudioChunk.meeting_id == request.meeting_id,
+                    AudioChunk.status == "uploaded"
+                ).count()
+                if uploaded_count > 0:
+                    break
+                await asyncio.sleep(1)
+            print(f"DEBUG: 待機完了 - uploaded_count: {uploaded_count}")
+
+            # アップロード済みチャンクがあれば要約処理を開始
+            if uploaded_count > 0:
+                print(f"DEBUG: 要約処理開始 - meeting_id: {request.meeting_id}")
+                await recording_service.process_meeting(request.meeting_id, db)
+                print(f"DEBUG: 要約処理完了 - meeting_id: {request.meeting_id}")
+                
+                # ステータスを完了に変更
+                meeting.status = "completed"
+                db.commit()
+            else:
+                # チャンクが1つも到着しない場合はエラー
+                print(f"DEBUG: チャンク未到着のため処理を中止 - meeting_id: {request.meeting_id}")
+                meeting.status = "error"
+                db.commit()
             
         except Exception as e:
             print(f"要約処理エラー: {str(e)}")
