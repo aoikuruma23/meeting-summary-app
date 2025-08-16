@@ -323,10 +323,8 @@ async def end_recording(
                 meeting.status = "completed"
                 db.commit()
             else:
-                # チャンクが1つも到着しない場合はエラー
-                print(f"DEBUG: チャンク未到着のため処理を中止 - meeting_id: {request.meeting_id}")
-                meeting.status = "error"
-                db.commit()
+                # チャンクが1つも到着しない場合は処理待ちのままにする
+                print(f"DEBUG: チャンク未到着 - 後続のチャンクアップロードを待機（status=processingのまま） - meeting_id: {request.meeting_id}")
             
         except Exception as e:
             print(f"要約処理エラー: {str(e)}")
