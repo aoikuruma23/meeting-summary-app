@@ -18,6 +18,7 @@ const Recording: React.FC = () => {
   const [chunkNumber, setChunkNumber] = useState(0)
   const [currentMeetingId, setCurrentMeetingId] = useState<number | null>(null)
   const currentMeetingIdRef = useRef<number | null>(null)
+  const [captureMode, setCaptureMode] = useState<'mic' | 'tab'>('mic')
   
   // 録音時間関連
   const [recordingTime, setRecordingTime] = useState(0)
@@ -26,6 +27,7 @@ const Recording: React.FC = () => {
   
   const audioChunks = useRef<Blob[]>([])
   const stream = useRef<MediaStream | null>(null)
+  const displayStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     if (!user) {
@@ -46,16 +48,40 @@ const Recording: React.FC = () => {
     })()
     
     try {
-      // マイクの権限を事前チェック
-      console.log('マイク権限を確認中...')
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      })
-      console.log('マイク権限取得成功')
+      let mediaStream: MediaStream
+      if (captureMode === 'tab') {
+        if (String(user?.is_premium) !== 'true') {
+          const goUpgrade = confirm('タブ音声録音はプレミアム限定機能です。プラン画面に移動しますか？')
+          if (goUpgrade) navigate('/billing')
+          return
+        }
+        if (!navigator.mediaDevices || !(navigator.mediaDevices as any).getDisplayMedia) {
+          alert('このブラウザはタブ音声録音に対応していません。Chromeの最新バージョンをお試しください。')
+          return
+        }
+        console.log('タブ音声権限を確認中...')
+        const displayStream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: true })
+        const audioTracks = displayStream.getAudioTracks()
+        if (!audioTracks || audioTracks.length === 0) {
+          displayStream.getTracks().forEach((t: MediaStreamTrack) => t.stop())
+          alert('音声が取得できませんでした。共有ダイアログで「タブの音声を共有」を有効にしてください。')
+          return
+        }
+        displayStreamRef.current = displayStream
+        mediaStream = new MediaStream(audioTracks)
+        console.log('タブ音声取得成功')
+      } else {
+        // マイクの権限を事前チェック
+        console.log('マイク権限を確認中...')
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          } 
+        })
+        console.log('マイク権限取得成功')
+      }
       stream.current = mediaStream
       
       // MediaRecorderを初期化
@@ -150,6 +176,10 @@ const Recording: React.FC = () => {
       
       if (stream.current) {
         stream.current.getTracks().forEach(track => track.stop())
+      }
+      if (displayStreamRef.current) {
+        displayStreamRef.current.getTracks().forEach(track => track.stop())
+        displayStreamRef.current = null
       }
       
       if (chunkInterval) {
@@ -265,6 +295,39 @@ const Recording: React.FC = () => {
                   placeholder="例: 週次ミーティング 2024年1月"
                   className="title-input"
                 />
+              </div>
+              
+              <div className="input-group">
+                <label>入力ソース</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className={`start-recording-btn ${captureMode === 'mic' ? 'active' : ''}`}
+                    onClick={() => setCaptureMode('mic')}
+                  >
+                    🎙️ マイク
+                  </button>
+                  <button
+                    type="button"
+                    className={`start-recording-btn ${captureMode === 'tab' ? 'active' : ''}`}
+                    onClick={() => {
+                      if (String(user?.is_premium) !== 'true') {
+                        const go = confirm('タブ音声録音はプレミアム限定機能です。プラン画面に移動しますか？')
+                        if (go) navigate('/billing')
+                        return
+                      }
+                      setCaptureMode('tab')
+                    }}
+                    title={String(user?.is_premium) === 'true' ? 'ブラウザのタブ音声を録音（Chrome推奨）' : 'プレミアム限定'}
+                  >
+                    🧩 タブ音声（プレミアム）
+                  </button>
+                </div>
+                {captureMode === 'tab' && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                    Chromeでのご利用を推奨します。共有ダイアログで録りたいタブを選び、「タブの音声を共有」を有効にしてください。
+                  </p>
+                )}
               </div>
               
               <div className="recording-info">
