@@ -180,17 +180,23 @@ async def upload_chunk(
         
         # 録音時間制限チェック
         if meeting.status == "recording" and meeting.max_duration:
-            # 日本時間（JST）を取得
+            # 日本時間（JST）を取得（タイムゾーンありの現在時刻）
             jst = timezone(timedelta(hours=9))
             current_time = datetime.now(jst)
-            
+
             # 録音開始時刻を現在時刻に更新（初回チャンクの場合）
             if chunk_number == 0:
                 meeting.created_at = current_time
                 db.commit()
                 print(f"DEBUG: 録音開始時刻を更新 - meeting_id: {meeting_id}")
-            
-            elapsed_minutes = (current_time - meeting.created_at).total_seconds() / 60
+
+            # meeting.created_at がタイムゾーンなしの場合に備えて補正
+            meeting_created_at = meeting.created_at
+            if meeting_created_at is not None and meeting_created_at.tzinfo is None:
+                # DB格納がnaiveの場合はJSTとして扱う（アプリ全体でJSTで保存/表示しているため）
+                meeting_created_at = meeting_created_at.replace(tzinfo=jst)
+
+            elapsed_minutes = (current_time - meeting_created_at).total_seconds() / 60
             if elapsed_minutes >= meeting.max_duration:
                 # 録音時間制限に達した場合、録音を自動停止
                 meeting.status = "completed"

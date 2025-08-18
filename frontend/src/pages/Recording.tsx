@@ -30,6 +30,7 @@ const Recording: React.FC = () => {
   const displayStreamRef = useRef<MediaStream | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
+  const finalUploadPromiseRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     if (!user) {
@@ -108,16 +109,35 @@ const Recording: React.FC = () => {
       }
       stream.current = mediaStream
       
-      // MediaRecorderを初期化
-      const recorder = new MediaRecorder(mediaStream, {
-        mimeType: 'audio/webm;codecs=opus'
-      })
+      // MediaRecorderを初期化（タブ系は96kbpsでサイズ抑制）
+      const recorderOptions: MediaRecorderOptions =
+        (captureMode === 'tab' || captureMode === 'tabmix')
+          ? { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 96000 }
+          : { mimeType: 'audio/webm;codecs=opus' }
+      const recorder = new MediaRecorder(mediaStream, recorderOptions)
       
       // データが利用可能になったときのイベントハンドラーを設定
       recorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
           console.log('音声データ受信:', event.data.size, 'bytes')
-          await handleChunkUpload(event.data)
+          if (captureMode === 'tab' || captureMode === 'tabmix') {
+            audioChunks.current.push(event.data)
+          } else {
+            await handleChunkUpload(event.data)
+          }
+        }
+      }
+
+      // 停止時にタブ系は一括アップロード
+      recorder.onstop = async () => {
+        try {
+          if ((captureMode === 'tab' || captureMode === 'tabmix') && audioChunks.current.length > 0) {
+            const combined = new Blob(audioChunks.current, { type: 'audio/webm' })
+            finalUploadPromiseRef.current = uploadFinalCombinedBlob(combined)
+            await finalUploadPromiseRef.current
+          }
+        } catch (e) {
+          console.error('最終アップロードエラー:', e)
         }
       }
       
@@ -142,19 +162,23 @@ const Recording: React.FC = () => {
         
         // 録音開始を少し遅らせて、meetingIdが確実に設定されるようにする
         setTimeout(() => {
-          recorder.start(600000) // 10分ごとにデータを取得（コスト効率的）
+          if (captureMode === 'mic') {
+            recorder.start(600000) // 10分ごとにデータを取得
+            // 10分ごとのチャンク化
+            const interval = setInterval(() => {
+              if (recorder.state === 'recording') {
+                setChunkNumber(prev => prev + 1)
+              }
+            }, 600000)
+            setChunkInterval(interval)
+          } else {
+            // タブ/タブ＋マイクは停止時一括アップロード
+            audioChunks.current = []
+            recorder.start()
+            setChunkInterval(null)
+          }
           setIsRecording(true)
           setChunkNumber(0)
-          audioChunks.current = []
-          
-          // 10分ごとのチャンク化（コスト効率的）
-          const interval = setInterval(() => {
-            if (recorder.state === 'recording') {
-              setChunkNumber(prev => prev + 1)
-            }
-          }, 600000) // 10分ごと
-          
-          setChunkInterval(interval)
           
           // 録音時間のカウントダウン開始
           const timeInterval = setInterval(() => {
@@ -196,6 +220,15 @@ const Recording: React.FC = () => {
     try {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop()
+      }
+
+      // タブ系は停止時の一括アップロード完了を待つ
+      if (captureMode === 'tab' || captureMode === 'tabmix') {
+        await new Promise((r) => setTimeout(r, 50))
+        if (finalUploadPromiseRef.current) {
+          try { await finalUploadPromiseRef.current } catch {}
+          finalUploadPromiseRef.current = null
+        }
       }
       
       if (stream.current) {
@@ -256,6 +289,23 @@ const Recording: React.FC = () => {
     } catch (error) {
       console.error('録音停止エラー:', error)
       alert('録音の停止中にエラーが発生しました。')
+    }
+  }
+
+  // タブ/タブ＋マイク用: 停止時の一括アップロード
+  const uploadFinalCombinedBlob = async (blob: Blob) => {
+    try {
+      if (!currentMeetingIdRef.current) {
+        console.log('meetingIdが設定されていません（final）')
+        return
+      }
+      console.log('最終ファイル一括アップロード開始 - size:', blob.size, 'bytes')
+      const file = new File([blob], 'final.webm', { type: 'audio/webm' })
+      await recordingService.uploadChunk(currentMeetingIdRef.current, 0, file)
+      console.log('最終ファイル一括アップロード成功')
+    } catch (error: any) {
+      console.error('最終ファイル一括アップロードエラー:', error)
+      console.error('エラー詳細:', error.response?.data || error.message)
     }
   }
 
