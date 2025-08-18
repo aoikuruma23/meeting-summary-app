@@ -193,8 +193,9 @@ async def upload_chunk(
             # meeting.created_at がタイムゾーンなしの場合に備えて補正
             meeting_created_at = meeting.created_at
             if meeting_created_at is not None and meeting_created_at.tzinfo is None:
-                # DB格納がnaiveの場合はJSTとして扱う（アプリ全体でJSTで保存/表示しているため）
-                meeting_created_at = meeting_created_at.replace(tzinfo=jst)
+                # DBにタイムゾーン情報なしで保存されている場合はUTCとして解釈し、JSTへ変換
+                # これによりUTC保存時の+9時間ズレ（540分）問題を回避
+                meeting_created_at = meeting_created_at.replace(tzinfo=timezone.utc).astimezone(jst)
 
             elapsed_minutes = (current_time - meeting_created_at).total_seconds() / 60
             if elapsed_minutes >= meeting.max_duration:
