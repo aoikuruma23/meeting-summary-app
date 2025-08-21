@@ -1,13 +1,23 @@
+const APP_SHELL_CACHE = 'app-shell-v2'
+
 self.addEventListener('install', (event) => {
 	self.skipWaiting()
 	// index.html を事前キャッシュしてナビゲーション時のフォールバックに使う
 	event.waitUntil(
-		caches.open('app-shell-v1').then((cache) => cache.addAll(['/index.html']))
+		caches.open(APP_SHELL_CACHE).then((cache) => cache.addAll(['/index.html']))
 	)
 })
 
 self.addEventListener('activate', (event) => {
-	event.waitUntil(self.clients.claim())
+	event.waitUntil(
+		(async () => {
+			const keys = await caches.keys()
+			await Promise.all(
+				keys.filter((key) => key !== APP_SHELL_CACHE).map((key) => caches.delete(key))
+			)
+			await self.clients.claim()
+		})()
+	)
 })
 
 // ネットワーク優先、失敗時にキャッシュ（プレーンな例。必要に応じて強化可能）
