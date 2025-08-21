@@ -120,22 +120,15 @@ const Recording: React.FC = () => {
       recorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
           console.log('音声データ受信:', event.data.size, 'bytes')
-          if (captureMode === 'tab' || captureMode === 'tabmix') {
-            audioChunks.current.push(event.data)
-          } else {
-            await handleChunkUpload(event.data)
-          }
+          // すべてのモードで到着都度アップロード（Whisperの25MB制限対策）
+          await handleChunkUpload(event.data)
         }
       }
 
-      // 停止時にタブ系は一括アップロード
+      // 停止時の処理（データはondataavailableで都度アップロード済み）
       recorder.onstop = async () => {
         try {
-          if ((captureMode === 'tab' || captureMode === 'tabmix') && audioChunks.current.length > 0) {
-            const combined = new Blob(audioChunks.current, { type: 'audio/webm' })
-            finalUploadPromiseRef.current = uploadFinalCombinedBlob(combined)
-            await finalUploadPromiseRef.current
-          }
+          // no-op
         } catch (e) {
           console.error('最終アップロードエラー:', e)
         }
@@ -172,10 +165,15 @@ const Recording: React.FC = () => {
             }, 600000)
             setChunkInterval(interval)
           } else {
-            // タブ/タブ＋マイクは停止時一括アップロード
+            // タブ/タブ＋マイクも10分ごとに分割アップロード（25MB制限回避）
             audioChunks.current = []
-            recorder.start()
-            setChunkInterval(null)
+            recorder.start(600000)
+            const interval = setInterval(() => {
+              if (recorder.state === 'recording') {
+                setChunkNumber(prev => prev + 1)
+              }
+            }, 600000)
+            setChunkInterval(interval)
           }
           setIsRecording(true)
           setChunkNumber(0)
