@@ -290,22 +290,7 @@ const Recording: React.FC = () => {
     }
   }
 
-  // タブ/タブ＋マイク用: 停止時の一括アップロード
-  const uploadFinalCombinedBlob = async (blob: Blob) => {
-    try {
-      if (!currentMeetingIdRef.current) {
-        console.log('meetingIdが設定されていません（final）')
-        return
-      }
-      console.log('最終ファイル一括アップロード開始 - size:', blob.size, 'bytes')
-      const file = new File([blob], 'final.webm', { type: 'audio/webm' })
-      await recordingService.uploadChunk(currentMeetingIdRef.current, 0, file)
-      console.log('最終ファイル一括アップロード成功')
-    } catch (error: any) {
-      console.error('最終ファイル一括アップロードエラー:', error)
-      console.error('エラー詳細:', error.response?.data || error.message)
-    }
-  }
+  // 停止時の一括アップロードは廃止（ondataavailableで逐次アップロード）
 
   const handleChunkUpload = async (audioBlob: Blob) => {
     try {
