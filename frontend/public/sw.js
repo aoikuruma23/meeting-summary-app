@@ -1,3 +1,19 @@
+// Minimal Service Worker: no caching, just lifecycle handling
+self.addEventListener('install', (event) => {
+	self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+	event.waitUntil(self.clients.claim())
+})
+
+self.addEventListener('message', (event) => {
+	if (event && event.data && event.data.type === 'SKIP_WAITING') {
+		self.skipWaiting()
+	}
+})
+
+// No fetch handler => default network behavior
 const APP_SHELL_CACHE = 'app-shell-v2'
 
 self.addEventListener('install', (event) => {
