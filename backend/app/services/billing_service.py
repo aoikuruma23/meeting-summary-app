@@ -449,28 +449,39 @@ class BillingService:
     def _handle_checkout_completed(self, session: dict, db: Session):
         """チェックアウト完了時の処理"""
         try:
-            # ユーザーIDを取得
-            user_id = session.metadata.get('user_id')
-            print(f"ERROR: Webhook処理開始 - user_id: {user_id}")
-            if not user_id:
-                print(f"ERROR: user_idが見つかりません")
-                return
-            
-            # ユーザーを取得
-            user = db.query(User).filter(User.id == user_id).first()
+            # ユーザーを特定（customer → metadata の順で堅牢に解決）
+            user = None
+
+            # 1) Stripe customer から解決（推奨）
+            customer_id = getattr(session, 'customer', None) if not isinstance(session, dict) else session.get('customer')
+            if customer_id:
+                user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+
+            # 2) metadata.user_id があれば数値として解決
+            if user is None:
+                metadata = getattr(session, 'metadata', {}) if not isinstance(session, dict) else session.get('metadata', {}) or {}
+                meta_user_id = metadata.get('user_id')
+                print(f"ERROR: Webhook処理開始 - metadata.user_id: {meta_user_id}, customer: {customer_id}")
+                if meta_user_id:
+                    try:
+                        int_user_id = int(meta_user_id)
+                        user = db.query(User).filter(User.id == int_user_id).first()
+                    except ValueError:
+                        print("ERROR: metadata.user_id が数値でありません。customerによる解決を利用します。")
+
             if not user:
-                print(f"ERROR: ユーザーが見つかりません - user_id: {user_id}")
+                print(f"ERROR: ユーザーが特定できません - customer={customer_id}")
                 return
             
             print(f"ERROR: ユーザー発見 - id: {user.id}, email: {user.email}, is_premium: {user.is_premium}")
             
             # サブスクリプションIDを保存
-            subscription_id = session.subscription
+            subscription_id = getattr(session, 'subscription', None) if not isinstance(session, dict) else session.get('subscription')
             if subscription_id:
                 user.stripe_subscription_id = subscription_id
                 user.is_premium = "true"
                 db.commit()
-                print(f"ERROR: サブスクリプション完了 - user_id: {user_id}, subscription_id: {subscription_id}")
+                print(f"ERROR: サブスクリプション完了 - user_id: {user.id}, subscription_id: {subscription_id}")
                 print(f"ERROR: is_premiumをtrueに更新しました")
             else:
                 print(f"ERROR: subscription_idが見つかりません")
