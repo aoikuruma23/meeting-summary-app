@@ -13,27 +13,6 @@ class Settings:
         self.DB_NAME = os.getenv("DB_NAME", "postgres")
         self.DB_USER = os.getenv("DB_USER", "postgres")
         self.DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-    
-    # PostgreSQLの場合、URLを調整
-    @property
-    def database_url(self) -> str:
-        # 完全な接続文字列が設定されている場合は優先
-        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql://"):
-            return self.DATABASE_URL
-        
-        # 個別設定がある場合は組み立て
-        if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
-            import urllib.parse
-            password = urllib.parse.quote_plus(self.DB_PASSWORD)
-            # 課金プランなので直接接続（ポート5432）を使用
-            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        
-        # 従来のDATABASE_URLを使用
-        if self.DATABASE_URL.startswith("postgres://"):
-            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
-        return self.DATABASE_URL
-        
-    def __init__(self):
         # JWT設定
         self.SECRET_KEY = os.getenv("SECRET_KEY", "meeting-summary-app-secret-key-2025-super-secure-jwt-token-key")
         self.ALGORITHM = "HS256"
@@ -99,6 +78,25 @@ class Settings:
         
         # Whisper設定
         self.WHISPER_MODEL = "base"
+    
+    # PostgreSQLの場合、URLを調整
+    @property
+    def database_url(self) -> str:
+        # 完全な接続文字列が設定されている場合は優先
+        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql://"):
+            return self.DATABASE_URL
+        
+        # 個別設定がある場合は組み立て
+        if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
+            import urllib.parse
+            password = urllib.parse.quote_plus(self.DB_PASSWORD)
+            # 課金プランなので直接接続（ポート5432）を使用
+            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        
+        # 従来のDATABASE_URLを使用
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
 
 # 設定を初期化
 settings = Settings()
