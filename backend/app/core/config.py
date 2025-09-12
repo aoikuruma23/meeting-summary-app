@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # PostgreSQLの場合、URLを調整
     @property
     def database_url(self) -> str:
+        # 完全な接続文字列が設定されている場合は優先
+        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql://"):
+            return self.DATABASE_URL
+        
         # 個別設定がある場合は組み立て
         if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
             import urllib.parse
