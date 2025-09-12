@@ -1,169 +1,109 @@
 import os
 from typing import Optional, List
 
-class Settings:
-    """設定クラス（pydanticを使わない簡易版）"""
-    def __init__(self):
-        # データベース設定
-        self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
-        
-        # 個別データベース設定（Render用）
-        self.DB_HOST = os.getenv("DB_HOST", "")
-        self.DB_PORT = os.getenv("DB_PORT", "5432")
-        self.DB_NAME = os.getenv("DB_NAME", "postgres")
-        self.DB_USER = os.getenv("DB_USER", "postgres")
-        self.DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-        # JWT設定
-        self.SECRET_KEY = os.getenv("SECRET_KEY", "meeting-summary-app-secret-key-2025-super-secure-jwt-token-key")
-        self.ALGORITHM = "HS256"
-        self.ACCESS_TOKEN_EXPIRE_MINUTES = 30
-        
-        # OpenAI設定
-        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-        
-        # Stripe設定
-        self.STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
-        self.STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
-        self.STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-        self.STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
-        self.STRIPE_PORTAL_CONFIGURATION_ID = os.getenv("STRIPE_PORTAL_CONFIGURATION_ID", "")
-        
-        # 暗号化設定
-        self.ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "your-encryption-key-here")
-        
-        # Google OAuth設定
-        self.GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id.apps.googleusercontent.com")
-        self.GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
-        
-        # LINE OAuth設定
-        self.LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID", "2007873513")
-        self.LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
-        self.LINE_REDIRECT_URI = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.jibunkaikaku-lab.com")
-        
-        # ファイル設定
-        self.MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-        self.UPLOAD_DIR = "uploads"
-        self.AUDIO_CHUNKS_DIR = "audio_chunks"
-        self.SUMMARIES_DIR = "summaries"
-        
-        # 録音設定
-        self.FREE_RECORDING_LIMIT = 30  # 分
-        self.PREMIUM_RECORDING_LIMIT = 120  # 分
-        
-        # レート制限設定
-        self.RATE_LIMIT_MAX_REQUESTS = 100
-        self.RATE_LIMIT_WINDOW_SECONDS = 60
-        self.RATE_LIMIT_PER_MINUTE = 60
-        
-        # ログ設定
-        self.SECURITY_LEVEL = "standard"
-        self.LOG_LEVEL = "INFO"
-        self.LOG_FILE = "logs/app.log"
-        self.SECURITY_LOG_FILE = "logs/security.log"
-        self.PERFORMANCE_LOG_FILE = "logs/performance.log"
-        
-        # 音声ファイル設定
-        self.ALLOWED_AUDIO_TYPES = '["audio/wav","audio/mp3","audio/m4a","audio/aac","audio/flac","audio/ogg","audio/webm"]'
-        
-        # 課金設定
-        self.FREE_TRIAL_DAYS = "31"
-        self.FREE_USAGE_LIMIT = "10"
-        self.MONTHLY_PRICE = "999"
-        
-        # 機能設定
-        self.DUMMY_LOGIN_ENABLED = "true"
-        
-        # フロントエンド設定
-        self.VITE_API_URL = os.getenv("VITE_API_URL", "")
-        
-        # Whisper設定
-        self.WHISPER_MODEL = "base"
+# 設定を直接作成（クラスを使わない）
+def create_settings():
+    """設定オブジェクトを作成"""
+    settings = type('Settings', (), {})()
     
-    # PostgreSQLの場合、URLを調整
-    @property
-    def database_url(self) -> str:
-        # 完全な接続文字列が設定されている場合は優先
-        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql://"):
-            return self.DATABASE_URL
-        
-        # 個別設定がある場合は組み立て
-        if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
-            import urllib.parse
-            password = urllib.parse.quote_plus(self.DB_PASSWORD)
-            # 課金プランなので直接接続（ポート5432）を使用
-            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        
-        # 従来のDATABASE_URLを使用
-        if self.DATABASE_URL.startswith("postgres://"):
-            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
-        return self.DATABASE_URL
+    # データベース設定
+    settings.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
+    settings.DB_HOST = os.getenv("DB_HOST", "")
+    settings.DB_PORT = os.getenv("DB_PORT", "5432")
+    settings.DB_NAME = os.getenv("DB_NAME", "postgres")
+    settings.DB_USER = os.getenv("DB_USER", "postgres")
+    settings.DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+    
+    # JWT設定
+    settings.SECRET_KEY = os.getenv("SECRET_KEY", "meeting-summary-app-secret-key-2025-super-secure-jwt-token-key")
+    settings.ALGORITHM = "HS256"
+    settings.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    
+    # OpenAI設定
+    settings.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    
+    # Stripe設定
+    settings.STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+    settings.STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+    settings.STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    settings.STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
+    settings.STRIPE_PORTAL_CONFIGURATION_ID = os.getenv("STRIPE_PORTAL_CONFIGURATION_ID", "")
+    
+    # 暗号化設定
+    settings.ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "your-encryption-key-here")
+    
+    # Google OAuth設定
+    settings.GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id.apps.googleusercontent.com")
+    settings.GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
+    
+    # LINE OAuth設定
+    settings.LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID", "2007873513")
+    settings.LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
+    settings.LINE_REDIRECT_URI = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.jibunkaikaku-lab.com")
+    
+    # ファイル設定
+    settings.MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+    settings.UPLOAD_DIR = "uploads"
+    settings.AUDIO_CHUNKS_DIR = "audio_chunks"
+    settings.SUMMARIES_DIR = "summaries"
+    
+    # 録音設定
+    settings.FREE_RECORDING_LIMIT = 30  # 分
+    settings.PREMIUM_RECORDING_LIMIT = 120  # 分
+    
+    # レート制限設定
+    settings.RATE_LIMIT_MAX_REQUESTS = 100
+    settings.RATE_LIMIT_WINDOW_SECONDS = 60
+    settings.RATE_LIMIT_PER_MINUTE = 60
+    
+    # ログ設定
+    settings.SECURITY_LEVEL = "standard"
+    settings.LOG_LEVEL = "INFO"
+    settings.LOG_FILE = "logs/app.log"
+    settings.SECURITY_LOG_FILE = "logs/security.log"
+    settings.PERFORMANCE_LOG_FILE = "logs/performance.log"
+    
+    # 音声ファイル設定
+    settings.ALLOWED_AUDIO_TYPES = '["audio/wav","audio/mp3","audio/m4a","audio/aac","audio/flac","audio/ogg","audio/webm"]'
+    
+    # 課金設定
+    settings.FREE_TRIAL_DAYS = "31"
+    settings.FREE_USAGE_LIMIT = "10"
+    settings.MONTHLY_PRICE = "999"
+    
+    # 機能設定
+    settings.DUMMY_LOGIN_ENABLED = "true"
+    
+    # フロントエンド設定
+    settings.VITE_API_URL = os.getenv("VITE_API_URL", "")
+    
+    # Whisper設定
+    settings.WHISPER_MODEL = "base"
+    
+    return settings
+
+def get_database_url(settings):
+    """データベースURLを取得"""
+    # 完全な接続文字列が設定されている場合は優先
+    if settings.DATABASE_URL and settings.DATABASE_URL.startswith("postgresql://"):
+        return settings.DATABASE_URL
+    
+    # 個別設定がある場合は組み立て
+    if settings.DB_HOST and settings.DB_USER and settings.DB_PASSWORD:
+        import urllib.parse
+        password = urllib.parse.quote_plus(settings.DB_PASSWORD)
+        # 課金プランなので直接接続（ポート5432）を使用
+        return f"postgresql://{settings.DB_USER}:{password}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    
+    # 従来のDATABASE_URLを使用
+    if settings.DATABASE_URL.startswith("postgres://"):
+        return settings.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    return settings.DATABASE_URL
 
 # 設定を初期化
-try:
-    settings = Settings()
-    print("✅ 設定クラス初期化成功")
-except Exception as e:
-    print(f"❌ 設定クラス初期化エラー: {e}")
-    # フォールバック設定
-    settings = type('Settings', (), {
-        'DATABASE_URL': os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db"),
-        'DB_HOST': os.getenv("DB_HOST", ""),
-        'DB_PORT': os.getenv("DB_PORT", "5432"),
-        'DB_NAME': os.getenv("DB_NAME", "postgres"),
-        'DB_USER': os.getenv("DB_USER", "postgres"),
-        'DB_PASSWORD': os.getenv("DB_PASSWORD", ""),
-        'OPENAI_API_KEY': os.getenv("OPENAI_API_KEY", ""),
-        'GOOGLE_CLIENT_ID': os.getenv("GOOGLE_CLIENT_ID", ""),
-        'SECRET_KEY': os.getenv("SECRET_KEY", "meeting-summary-app-secret-key-2025-super-secure-jwt-token-key"),
-        'ALGORITHM': "HS256",
-        'ACCESS_TOKEN_EXPIRE_MINUTES': 30,
-        'STRIPE_SECRET_KEY': os.getenv("STRIPE_SECRET_KEY", ""),
-        'STRIPE_PUBLISHABLE_KEY': os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
-        'STRIPE_WEBHOOK_SECRET': os.getenv("STRIPE_WEBHOOK_SECRET", ""),
-        'STRIPE_PRICE_ID': os.getenv("STRIPE_PRICE_ID", ""),
-        'STRIPE_PORTAL_CONFIGURATION_ID': os.getenv("STRIPE_PORTAL_CONFIGURATION_ID", ""),
-        'ENCRYPTION_KEY': os.getenv("ENCRYPTION_KEY", "your-encryption-key-here"),
-        'GOOGLE_CLIENT_SECRET': os.getenv("GOOGLE_CLIENT_SECRET", ""),
-        'LINE_CHANNEL_ID': os.getenv("LINE_CHANNEL_ID", "2007873513"),
-        'LINE_CHANNEL_SECRET': os.getenv("LINE_CHANNEL_SECRET", ""),
-        'LINE_REDIRECT_URI': os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.jibunkaikaku-lab.com"),
-        'MAX_FILE_SIZE': 100 * 1024 * 1024,
-        'UPLOAD_DIR': "uploads",
-        'AUDIO_CHUNKS_DIR': "audio_chunks",
-        'SUMMARIES_DIR': "summaries",
-        'FREE_RECORDING_LIMIT': 30,
-        'PREMIUM_RECORDING_LIMIT': 120,
-        'RATE_LIMIT_MAX_REQUESTS': 100,
-        'RATE_LIMIT_WINDOW_SECONDS': 60,
-        'RATE_LIMIT_PER_MINUTE': 60,
-        'SECURITY_LEVEL': "standard",
-        'LOG_LEVEL': "INFO",
-        'LOG_FILE': "logs/app.log",
-        'SECURITY_LOG_FILE': "logs/security.log",
-        'PERFORMANCE_LOG_FILE': "logs/performance.log",
-        'ALLOWED_AUDIO_TYPES': '["audio/wav","audio/mp3","audio/m4a","audio/aac","audio/flac","audio/ogg","audio/webm"]',
-        'FREE_TRIAL_DAYS': "31",
-        'FREE_USAGE_LIMIT': "10",
-        'MONTHLY_PRICE': "999",
-        'DUMMY_LOGIN_ENABLED': "true",
-        'VITE_API_URL': os.getenv("VITE_API_URL", ""),
-        'WHISPER_MODEL': "base"
-    })()
-    
-    # database_urlプロパティを追加
-    def database_url(self):
-        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgresql://"):
-            return self.DATABASE_URL
-        if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
-            import urllib.parse
-            password = urllib.parse.quote_plus(self.DB_PASSWORD)
-            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        if self.DATABASE_URL.startswith("postgres://"):
-            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
-        return self.DATABASE_URL
-    
-    settings.database_url = database_url.__get__(settings, type(settings))
-    print("⚠️ フォールバック設定を使用")
+settings = create_settings()
+settings.database_url = get_database_url(settings)
+print("✅ 設定初期化成功")
 
 # デバッグ用：環境変数の確認
 try:
