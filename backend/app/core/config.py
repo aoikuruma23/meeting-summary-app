@@ -1,17 +1,18 @@
-from pydantic_settings import BaseSettings
-from typing import Optional, List
 import os
+from typing import Optional, List
 
-class Settings(BaseSettings):
-    # データベース設定
-    DATABASE_URL: str = "sqlite:///./meeting_summary.db"
-    
-    # 個別データベース設定（Render用）
-    DB_HOST: str = ""
-    DB_PORT: str = "5432"
-    DB_NAME: str = "postgres"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = ""
+class Settings:
+    """設定クラス（pydanticを使わない簡易版）"""
+    def __init__(self):
+        # データベース設定
+        self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
+        
+        # 個別データベース設定（Render用）
+        self.DB_HOST = os.getenv("DB_HOST", "")
+        self.DB_PORT = os.getenv("DB_PORT", "5432")
+        self.DB_NAME = os.getenv("DB_NAME", "postgres")
+        self.DB_USER = os.getenv("DB_USER", "postgres")
+        self.DB_PASSWORD = os.getenv("DB_PASSWORD", "")
     
     # PostgreSQLの場合、URLを調整
     @property
@@ -31,96 +32,76 @@ class Settings(BaseSettings):
         if self.DATABASE_URL.startswith("postgres://"):
             return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
         return self.DATABASE_URL
-    
-    # JWT設定
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "meeting-summary-app-secret-key-2025-super-secure-jwt-token-key")
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    # OpenAI設定
-    OPENAI_API_KEY: str = ""
-    
-    # Stripe設定
-    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
-    STRIPE_PUBLISHABLE_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    STRIPE_PRICE_ID: str = os.getenv("STRIPE_PRICE_ID", "")
-    STRIPE_PORTAL_CONFIGURATION_ID: str = os.getenv("STRIPE_PORTAL_CONFIGURATION_ID", "")
-    
-    # 暗号化設定
-    ENCRYPTION_KEY: str = "your-encryption-key-here"
-    
-    # Google OAuth設定
-    # Google Cloud Consoleで取得したクライアントIDに置き換えてください
-    # 1. https://console.cloud.google.com/ にアクセス
-    # 2. プロジェクトを作成または選択
-    # 3. 「APIとサービス」→「認証情報」でOAuth 2.0クライアントIDを作成
-    # 4. 承認済みリダイレクトURI: http://localhost:3000/auth/callback, https://meeting-summary-app.onrender.com/auth/callback
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id.apps.googleusercontent.com")
-    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
-    
-    # LINE OAuth設定
-    LINE_CHANNEL_ID: str = os.getenv("LINE_CHANNEL_ID", "2007873513")
-    LINE_CHANNEL_SECRET: str = os.getenv("LINE_CHANNEL_SECRET", "")
-    LINE_REDIRECT_URI: str = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.jibunkaikaku-lab.com")
-    
-    # ファイル設定
-    MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
-    UPLOAD_DIR: str = "uploads"
-    AUDIO_CHUNKS_DIR: str = "audio_chunks"
-    SUMMARIES_DIR: str = "summaries"
-    
-    # 録音設定
-    FREE_RECORDING_LIMIT: int = 30  # 分
-    PREMIUM_RECORDING_LIMIT: int = 120  # 分
-    
-    # レート制限設定
-    RATE_LIMIT_MAX_REQUESTS: int = 100
-    RATE_LIMIT_WINDOW_SECONDS: int = 60
-    RATE_LIMIT_PER_MINUTE: int = 60
-    
-    # ログ設定
-    SECURITY_LEVEL: str = "standard"
-    LOG_LEVEL: str = "INFO"
-    LOG_FILE: str = "logs/app.log"
-    SECURITY_LOG_FILE: str = "logs/security.log"
-    PERFORMANCE_LOG_FILE: str = "logs/performance.log"
-    
-    # 音声ファイル設定
-    ALLOWED_AUDIO_TYPES: str = '["audio/wav","audio/mp3","audio/m4a","audio/aac","audio/flac","audio/ogg","audio/webm"]'
-    
-    # 課金設定
-    FREE_TRIAL_DAYS: str = "31"
-    FREE_USAGE_LIMIT: str = "10"
-    MONTHLY_PRICE: str = "999"
-    
-    # 機能設定
-    DUMMY_LOGIN_ENABLED: str = "true"
-    
-    # フロントエンド設定
-    VITE_API_URL: str = os.getenv("VITE_API_URL", "")
-    
-    # Whisper設定
-    WHISPER_MODEL: str = "base"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+        
+    def __init__(self):
+        # JWT設定
+        self.SECRET_KEY = os.getenv("SECRET_KEY", "meeting-summary-app-secret-key-2025-super-secure-jwt-token-key")
+        self.ALGORITHM = "HS256"
+        self.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+        
+        # OpenAI設定
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+        
+        # Stripe設定
+        self.STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+        self.STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+        self.STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+        self.STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
+        self.STRIPE_PORTAL_CONFIGURATION_ID = os.getenv("STRIPE_PORTAL_CONFIGURATION_ID", "")
+        
+        # 暗号化設定
+        self.ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "your-encryption-key-here")
+        
+        # Google OAuth設定
+        self.GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id.apps.googleusercontent.com")
+        self.GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
+        
+        # LINE OAuth設定
+        self.LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID", "2007873513")
+        self.LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
+        self.LINE_REDIRECT_URI = os.getenv("LINE_REDIRECT_URI", "https://meeting-summary-app.jibunkaikaku-lab.com")
+        
+        # ファイル設定
+        self.MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+        self.UPLOAD_DIR = "uploads"
+        self.AUDIO_CHUNKS_DIR = "audio_chunks"
+        self.SUMMARIES_DIR = "summaries"
+        
+        # 録音設定
+        self.FREE_RECORDING_LIMIT = 30  # 分
+        self.PREMIUM_RECORDING_LIMIT = 120  # 分
+        
+        # レート制限設定
+        self.RATE_LIMIT_MAX_REQUESTS = 100
+        self.RATE_LIMIT_WINDOW_SECONDS = 60
+        self.RATE_LIMIT_PER_MINUTE = 60
+        
+        # ログ設定
+        self.SECURITY_LEVEL = "standard"
+        self.LOG_LEVEL = "INFO"
+        self.LOG_FILE = "logs/app.log"
+        self.SECURITY_LOG_FILE = "logs/security.log"
+        self.PERFORMANCE_LOG_FILE = "logs/performance.log"
+        
+        # 音声ファイル設定
+        self.ALLOWED_AUDIO_TYPES = '["audio/wav","audio/mp3","audio/m4a","audio/aac","audio/flac","audio/ogg","audio/webm"]'
+        
+        # 課金設定
+        self.FREE_TRIAL_DAYS = "31"
+        self.FREE_USAGE_LIMIT = "10"
+        self.MONTHLY_PRICE = "999"
+        
+        # 機能設定
+        self.DUMMY_LOGIN_ENABLED = "true"
+        
+        # フロントエンド設定
+        self.VITE_API_URL = os.getenv("VITE_API_URL", "")
+        
+        # Whisper設定
+        self.WHISPER_MODEL = "base"
 
 # 設定を初期化
-try:
-    settings = Settings()
-except Exception as e:
-    print(f"⚠️ 設定読み込みエラー: {e}")
-    # フォールバック設定
-    settings = Settings(
-        DATABASE_URL=os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db"),
-        DB_HOST=os.getenv("DB_HOST", ""),
-        DB_PORT=os.getenv("DB_PORT", "5432"),
-        DB_NAME=os.getenv("DB_NAME", "postgres"),
-        DB_USER=os.getenv("DB_USER", "postgres"),
-        DB_PASSWORD=os.getenv("DB_PASSWORD", "")
-    )
+settings = Settings()
 
 # デバッグ用：環境変数の確認
 print(f"DEBUG: OPENAI_API_KEY設定確認 - Key exists: {bool(settings.OPENAI_API_KEY)}")
