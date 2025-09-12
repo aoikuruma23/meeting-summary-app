@@ -109,11 +109,12 @@ async def database_status():
         from app.core.database import engine
         from sqlalchemy import text
         with engine.connect() as conn:
-            result = conn.execute(text("SELECT 1 as test"))
+            # Row ではなくスカラ値で返す（JSON化エラー回避）
+            value = conn.execute(text("SELECT 1 as test")).scalar()
             return {
                 "status": "connected",
                 "message": "データベース接続成功",
-                "test_result": result.fetchone()
+                "test_result": int(value) if value is not None else None
             }
     except Exception as e:
         return {
