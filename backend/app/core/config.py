@@ -4,14 +4,14 @@ import os
 
 class Settings(BaseSettings):
     # データベース設定
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
+    DATABASE_URL: str = "sqlite:///./meeting_summary.db"
     
     # 個別データベース設定（Render用）
-    DB_HOST: str = os.getenv("DB_HOST", "")
-    DB_PORT: str = os.getenv("DB_PORT", "5432")
-    DB_NAME: str = os.getenv("DB_NAME", "postgres")
-    DB_USER: str = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+    DB_HOST: str = ""
+    DB_PORT: str = "5432"
+    DB_NAME: str = "postgres"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = ""
     
     # PostgreSQLの場合、URLを調整
     @property
@@ -105,8 +105,22 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        case_sensitive = False
 
-settings = Settings()
+# 設定を初期化
+try:
+    settings = Settings()
+except Exception as e:
+    print(f"⚠️ 設定読み込みエラー: {e}")
+    # フォールバック設定
+    settings = Settings(
+        DATABASE_URL=os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db"),
+        DB_HOST=os.getenv("DB_HOST", ""),
+        DB_PORT=os.getenv("DB_PORT", "5432"),
+        DB_NAME=os.getenv("DB_NAME", "postgres"),
+        DB_USER=os.getenv("DB_USER", "postgres"),
+        DB_PASSWORD=os.getenv("DB_PASSWORD", "")
+    )
 
 # デバッグ用：環境変数の確認
 print(f"DEBUG: OPENAI_API_KEY設定確認 - Key exists: {bool(settings.OPENAI_API_KEY)}")
