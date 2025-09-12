@@ -1,11 +1,36 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
+import os
+
+# データベースURLを直接取得
+def get_database_url():
+    """データベースURLを取得"""
+    # 完全な接続文字列が設定されている場合は優先
+    database_url = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
+    if database_url and database_url.startswith("postgresql://"):
+        return database_url
+    
+    # 個別設定がある場合は組み立て
+    db_host = os.getenv("DB_HOST", "")
+    db_user = os.getenv("DB_USER", "postgres")
+    db_password = os.getenv("DB_PASSWORD", "")
+    db_port = os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "postgres")
+    
+    if db_host and db_user and db_password:
+        import urllib.parse
+        password = urllib.parse.quote_plus(db_password)
+        return f"postgresql://{db_user}:{password}@{db_host}:{db_port}/{db_name}"
+    
+    # 従来のDATABASE_URLを使用
+    if database_url.startswith("postgres://"):
+        return database_url.replace("postgres://", "postgresql://", 1)
+    return database_url
 
 # データベースエンジンの作成（接続プール設定付き）
 try:
-    database_url = settings.database_url
+    database_url = get_database_url()
     print(f"DEBUG: データベース接続文字列: {database_url[:50]}...")
     
     engine = create_engine(
