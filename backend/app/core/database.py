@@ -7,12 +7,12 @@ from app.core.config import settings
 engine = create_engine(
     settings.database_url,  # プロパティを使用
     connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
-    # Supabase用の接続プール設定（無料プラン対応）
-    pool_size=5,            # 基本接続数（無料プラン対応）
-    max_overflow=10,        # 追加接続数（最大15接続）
+    # Supabase用の接続プール設定（課金プラン対応）
+    pool_size=20,           # 基本接続数（課金プラン対応）
+    max_overflow=30,        # 追加接続数（最大50接続）
     pool_pre_ping=True,     # 接続検証（接続が生きているかチェック）
-    pool_recycle=1800,      # 接続リサイクル（30分）
-    pool_timeout=30,        # 接続タイムアウト（30秒）
+    pool_recycle=3600,      # 接続リサイクル（1時間）
+    pool_timeout=60,        # 接続タイムアウト（60秒）
     echo=False              # SQLログ出力（本番ではFalse）
 )
 
