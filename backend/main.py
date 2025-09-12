@@ -123,21 +123,7 @@ async def database_status():
             "suggestion": "環境変数 DATABASE_URL を確認してください"
         }
 
-@app.get("/env-status")
-async def environment_status():
-    """環境変数設定状況を確認"""
-    import os
-    from app.core.config import settings
-    
-    return {
-        "DATABASE_URL": settings.DATABASE_URL[:50] + "..." if len(settings.DATABASE_URL) > 50 else settings.DATABASE_URL,
-        "DB_HOST": settings.DB_HOST,
-        "DB_PORT": settings.DB_PORT,
-        "DB_NAME": settings.DB_NAME,
-        "DB_USER": settings.DB_USER,
-        "DB_PASSWORD": "***" if settings.DB_PASSWORD else "Not set",
-        "final_database_url": settings.database_url[:50] + "..." if len(settings.database_url) > 50 else settings.database_url
-    }
+# 本番では環境露出を避けるため/env-statusは削除
 
 @app.get("/cors-test")
 async def cors_test():
