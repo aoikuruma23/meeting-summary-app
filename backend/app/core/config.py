@@ -20,7 +20,9 @@ class Settings(BaseSettings):
         if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
             import urllib.parse
             password = urllib.parse.quote_plus(self.DB_PASSWORD)
-            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+            # Supabase接続プール版を使用（ポート5432の代わりに6543）
+            pooler_port = "6543"  # 接続プール用ポート
+            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{pooler_port}/{self.DB_NAME}"
         
         # 従来のDATABASE_URLを使用
         if self.DATABASE_URL.startswith("postgres://"):
