@@ -3,10 +3,16 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# データベースエンジンの作成
+# データベースエンジンの作成（接続プール設定付き）
 engine = create_engine(
     settings.database_url,  # プロパティを使用
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {}
+    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+    # Supabase用の接続プール設定
+    pool_size=20,           # 基本接続数
+    max_overflow=30,        # 追加接続数（最大50接続）
+    pool_pre_ping=True,     # 接続検証（接続が生きているかチェック）
+    pool_recycle=3600,      # 接続リサイクル（1時間）
+    echo=False              # SQLログ出力（本番ではFalse）
 )
 
 # セッションクラスの作成

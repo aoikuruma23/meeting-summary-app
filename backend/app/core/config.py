@@ -6,9 +6,23 @@ class Settings(BaseSettings):
     # データベース設定
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./meeting_summary.db")
     
+    # 個別データベース設定（Render用）
+    DB_HOST: str = os.getenv("DB_HOST", "")
+    DB_PORT: str = os.getenv("DB_PORT", "5432")
+    DB_NAME: str = os.getenv("DB_NAME", "postgres")
+    DB_USER: str = os.getenv("DB_USER", "postgres")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+    
     # PostgreSQLの場合、URLを調整
     @property
     def database_url(self) -> str:
+        # 個別設定がある場合は組み立て
+        if self.DB_HOST and self.DB_USER and self.DB_PASSWORD:
+            import urllib.parse
+            password = urllib.parse.quote_plus(self.DB_PASSWORD)
+            return f"postgresql://{self.DB_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        
+        # 従来のDATABASE_URLを使用
         if self.DATABASE_URL.startswith("postgres://"):
             return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
         return self.DATABASE_URL
