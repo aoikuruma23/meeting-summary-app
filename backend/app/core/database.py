@@ -32,5 +32,15 @@ def get_db():
 # モデルをインポートしてテーブルを作成
 from app.models import meeting, user
 
-# すべてのテーブルを作成
-Base.metadata.create_all(bind=engine) 
+# テーブル作成を遅延実行（起動時エラー回避）
+def create_tables():
+    """テーブルを作成（必要時に呼び出し）"""
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ データベーステーブル作成完了")
+    except Exception as e:
+        print(f"⚠️ テーブル作成エラー: {e}")
+        # エラーでも起動は継続
+
+# 起動時はテーブル作成をスキップ
+# create_tables()  # コメントアウト 

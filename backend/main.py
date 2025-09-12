@@ -9,8 +9,13 @@ from app.middleware.rate_limit import rate_limit_logging_middleware
 
 # データベーステーブルを作成（既存データは保持）
 print("データベーステーブルを作成中...")
-Base.metadata.create_all(bind=engine)
-print("✓ データベーステーブルの作成完了")
+try:
+    from app.core.database import create_tables
+    create_tables()
+    print("✓ データベーステーブルの作成完了")
+except Exception as e:
+    print(f"⚠️ データベーステーブル作成エラー: {e}")
+    print("⚠️ アプリケーションは起動を継続します")
 
 # マイグレーションを実行（念のため）
 try:
@@ -96,6 +101,26 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "API is running normally"}
+
+@app.get("/db-status")
+async def database_status():
+    """データベース接続状況を確認"""
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1 as test"))
+            return {
+                "status": "connected",
+                "message": "データベース接続成功",
+                "test_result": result.fetchone()
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"データベース接続エラー: {str(e)}",
+            "suggestion": "環境変数 DB_HOST, DB_USER, DB_PASSWORD を確認してください"
+        }
 
 @app.get("/cors-test")
 async def cors_test():
