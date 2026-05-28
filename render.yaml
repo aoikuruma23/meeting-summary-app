@@ -42,7 +42,7 @@ services:
       - key: LINE_CHANNEL_SECRET
         sync: false
       - key: LINE_REDIRECT_URI
-        value: "https://meeting-summary-app.onrender.com/auth/callback"
+        value: "https://meeting-summary-app.jibunkaikaku-lab.com"
       - key: DUMMY_LOGIN_ENABLED
         value: "true"
       - key: FREE_TRIAL_DAYS
