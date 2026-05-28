@@ -63,11 +63,18 @@ def verify_token(token: str):
     except JWTError:
         return None
 
+def _bcrypt_safe(password: str) -> str:
+    # bcrypt は 72 バイト超でエラー(>=4.0)。UTF-8 境界で安全に切り詰める
+    encoded = password.encode("utf-8")
+    if len(encoded) <= 72:
+        return password
+    return encoded[:72].decode("utf-8", errors="ignore")
+
 def get_password_hash(password: str):
-    return pwd_context.hash(password)
+    return pwd_context.hash(_bcrypt_safe(password))
 
 def verify_password(plain_password: str, hashed_password: str):
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_bcrypt_safe(plain_password), hashed_password)
 
 def validate_email_format(email: str) -> bool:
     """基本的なメール形式の検証"""
