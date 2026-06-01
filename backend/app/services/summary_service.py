@@ -76,10 +76,11 @@ class SummaryService:
                 print(f"DEBUG: Chat usage - prompt_tokens={getattr(usage, 'prompt_tokens', 'n/a')}, completion_tokens={getattr(usage, 'completion_tokens', 'n/a')}, total_tokens={getattr(usage, 'total_tokens', 'n/a')}")
             
             summary = response.choices[0].message.content
-            print(f"生成された要約: {summary}")
-            
+            # 機密保護: 要約本文はログに出力しない（文字数のみ）
+            print(f"要約生成完了 - 文字数: {len(summary) if summary else 0}文字")
+
             return summary
-            
+
         except Exception as e:
             print(f"要約生成中にエラーが発生: {str(e)}")
             import traceback
@@ -124,8 +125,9 @@ class SummaryService:
             )
             
             summary = response.choices[0].message.content
-            print(f"話者別要約生成完了: {summary}")
-            
+            # 機密保護: 要約本文はログに出力しない（文字数のみ）
+            print(f"話者別要約生成完了 - 文字数: {len(summary) if summary else 0}文字")
+
             return summary
             
         except Exception as e:

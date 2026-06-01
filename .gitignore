@@ -236,6 +236,13 @@ Thumbs.db
 uploads/
 summaries/
 exports/
+# 機密保護: 会議音声は絶対にコミットしない
+audio_chunks/
+backend/audio_chunks/
+*.ogg
+*.mp3
+*.webm
+*.encrypted
 *.db
 *.sqlite
 *.sqlite3

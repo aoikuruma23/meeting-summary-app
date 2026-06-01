@@ -75,7 +75,10 @@ class RecordingService:
             
             # 4. データベースの更新
             await self._update_meeting_status(meeting_id, "completed", file_url, db)
-            
+
+            # 5. 機密保護: 処理成功後は生音声を削除（転写・要約はDBに保存済み）
+            self._delete_meeting_audio(meeting_id)
+
             return file_url
         
         except Exception as e:
@@ -225,6 +228,23 @@ class RecordingService:
             print(f"チャンクファイルの取得に失敗: {str(e)}")
             return []
     
+    def _delete_meeting_audio(self, meeting_id: int) -> int:
+        """指定会議の生音声ファイルを削除（処理成功後の機密保護）。失敗しても本処理は止めない。"""
+        deleted = 0
+        try:
+            for filename in self.get_chunk_files(meeting_id):
+                file_path = os.path.join(self.upload_dir, filename)
+                try:
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                        deleted += 1
+                except Exception as e:
+                    print(f"音声削除に失敗: {filename} - {str(e)}")
+            print(f"DEBUG: 会議{meeting_id} の生音声を削除（{deleted}件）")
+        except Exception as e:
+            print(f"音声削除処理でエラー: {str(e)}")
+        return deleted
+
     def cleanup_old_files(self, days: int = 7):
         """古いファイルの削除"""
         try:
