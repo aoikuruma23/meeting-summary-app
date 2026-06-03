@@ -61,7 +61,7 @@ class SummaryService:
             print(f"ChatGPT API呼び出し開始...")
             
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "あなたは会議の要約を専門とする日本語アシスタントです。転写にない情報を付け加えず、厳密に事実のみを構造化して出力します。"},
                     {"role": "user", "content": prompt}
@@ -115,7 +115,7 @@ class SummaryService:
 各話者の主要な発言内容と貢献度を簡潔にまとめてください。"""
 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "あなたは会議の話者別分析を専門とするアシスタントです。"},
                     {"role": "user", "content": prompt}

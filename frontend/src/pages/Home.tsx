@@ -135,16 +135,16 @@ const Home: React.FC = () => {
           </div>
           <div className="hero-stats">
             <div className="stat-item">
-              <span className="stat-number">99%</span>
-              <span className="stat-label">精度</span>
-            </div>
-            <div className="stat-item">
               <span className="stat-number">2時間</span>
               <span className="stat-label">最大録音時間</span>
             </div>
             <div className="stat-item">
-              <span className="stat-number">5分</span>
-              <span className="stat-label">処理時間</span>
+              <span className="stat-number">¥999</span>
+              <span className="stat-label">月額（税込）</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">PDF/Word</span>
+              <span className="stat-label">出力対応</span>
             </div>
           </div>
         </div>
@@ -178,7 +178,7 @@ const Home: React.FC = () => {
               <h3>AI自動要約</h3>
               <p>ChatGPTによる高度な要約機能。重要なポイント、アクションアイテム、決定事項を自動抽出。</p>
               <ul className="feature-details">
-                <li>ChatGPT 4.0使用</li>
+                <li>OpenAI GPT-4o 使用</li>
                 <li>構造化要約</li>
                 <li>アクション抽出</li>
               </ul>
@@ -285,18 +285,18 @@ const Home: React.FC = () => {
               <h3>AI技術</h3>
               <ul>
                 <li>文字起こし: OpenAI Whisper</li>
-                <li>要約: OpenAI ChatGPT 4.0</li>
+                <li>要約: OpenAI GPT-4o</li>
                 <li>言語: 日本語対応</li>
-                <li>精度: 99%以上</li>
+                <li>方式: 構造化要約（創作なし）</li>
               </ul>
             </div>
             <div className="tech-spec-card">
               <h3>セキュリティ</h3>
               <ul>
                 <li>通信: HTTPS暗号化</li>
-                <li>データ: AES-256暗号化</li>
-                <li>認証: JWT + OAuth2.0</li>
-                <li>決済: Stripe標準</li>
+                <li>AI: 入力を学習に利用しません</li>
+                <li>録音: 処理後に自動削除</li>
+                <li>認証: JWT + OAuth2.0 / 決済: Stripe</li>
               </ul>
             </div>
             <div className="tech-spec-card">
