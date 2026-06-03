@@ -29,6 +29,11 @@ const Footer: React.FC = () => {
     scrollToTop()
   }
 
+  const handleTokushohoClick = () => {
+    navigate('/tokushoho')
+    scrollToTop()
+  }
+
   return (
     <footer className="footer">
       <div className="footer-content">
@@ -44,6 +49,7 @@ const Footer: React.FC = () => {
             <li><button onClick={handleHelpClick} className="footer-link">ヘルプ</button></li>
             <li><button onClick={handlePrivacyClick} className="footer-link">プライバシーポリシー</button></li>
             <li><button onClick={handleTermsClick} className="footer-link">利用規約</button></li>
+            <li><button onClick={handleTokushohoClick} className="footer-link">特定商取引法に基づく表記</button></li>
           </ul>
         </div>
         

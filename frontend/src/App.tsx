@@ -14,6 +14,7 @@ import Settings from './pages/Settings'
 import Help from './pages/Help'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
+import CommercialTransactions from './pages/CommercialTransactions'
 import AuthCallback from './pages/AuthCallback'
 import EmailVerification from './pages/EmailVerification'
 
@@ -45,6 +46,7 @@ function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/tokushoho" element={<CommercialTransactions />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/email-verification" element={<EmailVerification />} />
           <Route path="*" element={<Navigate to="/" replace />} />

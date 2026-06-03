@@ -1,0 +1,98 @@
+.ct-container {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.ct-container .back-button {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #1f3a5f;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ct-container .back-button:hover {
+  text-decoration: underline;
+}
+
+.ct-content {
+  font-family: -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, sans-serif;
+  color: #2a3340;
+  line-height: 1.85;
+  font-size: 15px;
+}
+
+.ct-content h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1f3a5f;
+  margin: 0 0 8px;
+}
+
+.ct-subtitle {
+  color: #7d8896;
+  font-size: 13px;
+  margin: 0 0 26px;
+}
+
+.ct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.ct-table tr {
+  border-top: 1px solid #e2e8f0;
+}
+
+.ct-table tr:last-child {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ct-table th {
+  text-align: left;
+  vertical-align: top;
+  width: 34%;
+  padding: 16px 14px;
+  color: #1f3a5f;
+  font-weight: 700;
+  background: transparent;
+}
+
+.ct-table td {
+  padding: 16px 14px;
+  color: #33414f;
+  vertical-align: top;
+}
+
+.ct-note {
+  font-size: 13px;
+  color: #7d8896;
+}
+
+.ct-footnote {
+  font-size: 12px;
+  color: #9aa4b1;
+  margin: 24px 0 0;
+}
+
+@media (max-width: 600px) {
+  .ct-table,
+  .ct-table tbody,
+  .ct-table tr,
+  .ct-table th,
+  .ct-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .ct-table th {
+    padding-bottom: 0;
+  }
+
+  .ct-table td {
+    padding-top: 4px;
+  }
+}
