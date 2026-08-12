@@ -93,32 +93,44 @@ def run_migration():
                 else:
                     print("ℹ line_user_idカラムは既に存在します")
             
-            # meetings テーブル: error_message カラムを追加（失敗理由の保存用）
-            if is_postgresql:
-                result = db.execute(text("""
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_name = 'meetings' AND table_schema = 'public'
-                """))
-            else:
-                result = db.execute(text("PRAGMA table_info(meetings)"))
-            meeting_columns = [row[0] if is_postgresql else row[1] for row in result.fetchall()]
-
-            if "error_message" not in meeting_columns:
-                db.execute(text("ALTER TABLE meetings ADD COLUMN error_message TEXT"))
-                print("✓ meetings.error_messageカラムを追加しました")
-            else:
-                print("ℹ meetings.error_messageカラムは既に存在します")
+            # ここまで（users テーブル）の変更を確定させる
+            db.commit()
 
             # 既存のline_idカラムをline_user_idにリネーム（存在する場合）
+            # 失敗時に rollback しないと、PostgreSQL ではトランザクションが
+            # アボート状態のままになり、以降のDDLがすべて巻き戻る
             try:
                 db.execute(text("ALTER TABLE users RENAME COLUMN line_id TO line_user_id"))
+                db.commit()
                 print("✓ line_idカラムをline_user_idにリネームしました")
-            except:
+            except Exception:
+                db.rollback()
                 print("ℹ line_idカラムは存在しないか、既にリネーム済みです")
-            
-            # 変更をコミット
-            db.commit()
+
+            # meetings テーブル: error_message カラムを追加（失敗理由の保存用）
+            # 他のDDLの失敗に巻き込まれないよう独立したトランザクションで実行する
+            try:
+                if is_postgresql:
+                    result = db.execute(text("""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_name = 'meetings' AND table_schema = 'public'
+                    """))
+                else:
+                    result = db.execute(text("PRAGMA table_info(meetings)"))
+                meeting_columns = [row[0] if is_postgresql else row[1] for row in result.fetchall()]
+
+                if "error_message" not in meeting_columns:
+                    db.execute(text("ALTER TABLE meetings ADD COLUMN error_message TEXT"))
+                    db.commit()
+                    print("✓ meetings.error_messageカラムを追加しました")
+                else:
+                    print("ℹ meetings.error_messageカラムは既に存在します")
+            except Exception as e:
+                db.rollback()
+                print(f"❌ meetings.error_messageカラムの追加に失敗しました: {e}")
+                raise
+
             print("✓ データベースマイグレーションが完了しました")
             
         except Exception as e:
