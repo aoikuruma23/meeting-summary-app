@@ -6,6 +6,47 @@ import { authService } from '../services/authService'
 import { recordingService } from '../services/recordingService'
 import './Recording.css'
 
+// チャンク分割間隔（ミリ秒）。本番は10分固定。
+// 検証時のみ ?chunkSec=60 のようなクエリで短縮できる（分割の挙動を短時間で確認するため）
+const DEFAULT_CHUNK_INTERVAL_MS = 600000
+
+const getChunkIntervalMs = (): number => {
+  const fromQuery = new URLSearchParams(window.location.search).get('chunkSec')
+
+  // ?chunkSec=0 で通常設定に戻す
+  if (fromQuery === '0') {
+    window.localStorage.removeItem('chunkSec')
+    return DEFAULT_CHUNK_INTERVAL_MS
+  }
+
+  // クエリは画面遷移で失われるため、一度指定されたら保持する
+  const raw = fromQuery ?? window.localStorage.getItem('chunkSec')
+  const sec = raw ? parseInt(raw, 10) : NaN
+
+  // 下限を60秒にしてチャンクの過剰分割（＝アップロード回数の増大）を防ぐ
+  if (!Number.isNaN(sec) && sec >= 60 && sec <= 3600) {
+    if (fromQuery) {
+      window.localStorage.setItem('chunkSec', String(sec))
+    }
+    return sec * 1000
+  }
+
+  return DEFAULT_CHUNK_INTERVAL_MS
+}
+
+// タブ音声のキャプチャは Chromium 系のみ対応。
+// Firefox は getDisplayMedia を持つが音声トラックを返さず、Safari も画面共有の音声取得に非対応。
+// API の有無だけで判定すると、これらのブラウザが「対応」として通ってしまう
+const isTabAudioSupported = (): boolean => {
+  if (!navigator.mediaDevices || !(navigator.mediaDevices as any).getDisplayMedia) {
+    return false
+  }
+  const ua = navigator.userAgent
+  const isFirefox = /Firefox\//.test(ua)
+  const isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua)
+  return !isFirefox && !isSafari
+}
+
 const Recording: React.FC = () => {
   const { user, updateUser } = useAuth()
   const { recordingState: _, startRecording, stopRecording, uploadChunk: __, resetRecording } = useRecording()
@@ -13,12 +54,12 @@ const Recording: React.FC = () => {
   
   const [title, setTitle] = useState('')
   const [isRecording, setIsRecording] = useState(false)
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [chunkInterval, setChunkInterval] = useState<NodeJS.Timeout | null>(null)
   const [chunkNumber, setChunkNumber] = useState(0)
   const [currentMeetingId, setCurrentMeetingId] = useState<number | null>(null)
   const currentMeetingIdRef = useRef<number | null>(null)
   const [captureMode, setCaptureMode] = useState<'mic' | 'tab' | 'tabmix'>('mic')
+  const [chunkIntervalSec, setChunkIntervalSec] = useState(DEFAULT_CHUNK_INTERVAL_MS / 1000)
   
   // 録音時間関連
   const [recordingTime, setRecordingTime] = useState(0)
@@ -30,13 +71,58 @@ const Recording: React.FC = () => {
   const displayStreamRef = useRef<MediaStream | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
-  const finalUploadPromiseRef = useRef<Promise<void> | null>(null)
+  // 録音中に差し替わるため ref で保持する（state では最新の recorder を掴めない）
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recorderOptionsRef = useRef<MediaRecorderOptions>({})
+  const chunkIndexRef = useRef(0)
+  const lastRotateAtRef = useRef(0)
+  // 停止時に完了を待つため、進行中のアップロードを保持する
+  const pendingUploadsRef = useRef<Promise<void>[]>([])
 
   useEffect(() => {
     if (!user) {
       navigate('/login')
     }
   }, [user, navigate])
+
+  // 検証用の分割間隔設定を画面に反映する
+  useEffect(() => {
+    setChunkIntervalSec(getChunkIntervalMs() / 1000)
+  }, [])
+
+  // チャンクごとに MediaRecorder を作り直す。
+  // timeslice による分割は2個目以降のBlobにwebmヘッダが付かず、Whisperが
+  // 「Invalid file format」で拒否するため、各チャンクを独立した完全なwebmにする。
+  const createRecorder = (source: MediaStream, chunkIndex: number): MediaRecorder => {
+    const recorder = new MediaRecorder(source, recorderOptionsRef.current)
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        console.log(`音声データ受信 - chunk ${chunkIndex}:`, event.data.size, 'bytes')
+        pendingUploadsRef.current.push(handleChunkUpload(event.data, chunkIndex))
+      }
+    }
+
+    return recorder
+  }
+
+  // 現在の recorder を止めて次の recorder に切り替える（stopで1チャンク確定）
+  const rotateRecorder = () => {
+    const current = mediaRecorderRef.current
+    if (!current || current.state !== 'recording' || !stream.current) {
+      return
+    }
+
+    current.stop()
+    chunkIndexRef.current += 1
+    lastRotateAtRef.current = Date.now()
+
+    const next = createRecorder(stream.current, chunkIndexRef.current)
+    next.start()
+    mediaRecorderRef.current = next
+    setChunkNumber(chunkIndexRef.current)
+    console.log('チャンクを切り替えました - 次の番号:', chunkIndexRef.current)
+  }
 
   const startRecordingHandler = async () => {
     // タイトルが空の場合は現在の日時で自動生成
@@ -58,8 +144,8 @@ const Recording: React.FC = () => {
           if (goUpgrade) navigate('/billing')
           return
         }
-        if (!navigator.mediaDevices || !(navigator.mediaDevices as any).getDisplayMedia) {
-          alert('このブラウザはタブ音声録音に対応していません。Chromeの最新バージョンをお試しください。')
+        if (!isTabAudioSupported()) {
+          alert('タブ音声録音は Chrome または Edge でのみご利用いただけます。\n\nFirefox / Safari は画面共有時の音声取得に対応していないため、共有ダイアログに「タブの音声も共有する」の項目自体が表示されません。')
           return
         }
         console.log('タブ音声権限を確認中...')
@@ -109,33 +195,12 @@ const Recording: React.FC = () => {
       }
       stream.current = mediaStream
       
-      // MediaRecorderを初期化（タブ系は96kbpsでサイズ抑制）
-      const recorderOptions: MediaRecorderOptions =
+      // MediaRecorderのオプション（タブ系は96kbpsでサイズ抑制）
+      recorderOptionsRef.current =
         (captureMode === 'tab' || captureMode === 'tabmix')
           ? { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 96000 }
           : { mimeType: 'audio/webm;codecs=opus' }
-      const recorder = new MediaRecorder(mediaStream, recorderOptions)
-      
-      // データが利用可能になったときのイベントハンドラーを設定
-      recorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          console.log('音声データ受信:', event.data.size, 'bytes')
-          // すべてのモードで到着都度アップロード（Whisperの25MB制限対策）
-          await handleChunkUpload(event.data)
-        }
-      }
 
-      // 停止時の処理（データはondataavailableで都度アップロード済み）
-      recorder.onstop = async () => {
-        try {
-          // no-op
-        } catch (e) {
-          console.error('最終アップロードエラー:', e)
-        }
-      }
-      
-      setMediaRecorder(recorder)
-      
       // APIで録音開始
       const response = await startRecording(recordingTitle)
       // meetingIdを即座に設定
@@ -154,27 +219,32 @@ const Recording: React.FC = () => {
         setRecordingTime(0)
         
         // 録音開始を少し遅らせて、meetingIdが確実に設定されるようにする
+        const chunkIntervalMs = getChunkIntervalMs()
+        console.log('チャンク分割間隔:', chunkIntervalMs / 1000, '秒')
+
         setTimeout(() => {
-          if (captureMode === 'mic') {
-            recorder.start(600000) // 10分ごとにデータを取得
-            // 10分ごとのチャンク化
-            const interval = setInterval(() => {
-              if (recorder.state === 'recording') {
-                setChunkNumber(prev => prev + 1)
-              }
-            }, 600000)
-            setChunkInterval(interval)
-          } else {
-            // タブ/タブ＋マイクも10分ごとに分割アップロード（25MB制限回避）
-            audioChunks.current = []
-            recorder.start(600000)
-            const interval = setInterval(() => {
-              if (recorder.state === 'recording') {
-                setChunkNumber(prev => prev + 1)
-              }
-            }, 600000)
-            setChunkInterval(interval)
-          }
+          // マイク/タブ系ともに一定間隔で分割アップロード（Whisperの25MB制限回避）
+          audioChunks.current = []
+          chunkIndexRef.current = 0
+          pendingUploadsRef.current = []
+
+          // timeslice は渡さない。stop() のたびに完全なwebmが1つ確定する
+          const firstRecorder = createRecorder(mediaStream, 0)
+          firstRecorder.start()
+          mediaRecorderRef.current = firstRecorder
+          lastRotateAtRef.current = Date.now()
+
+          // 1秒ごとに経過時間で判定する。
+          // 録音中はアプリのタブが非アクティブになるためタイマーが間引かれる。
+          // setInterval(rotate, 間隔) だと発火自体が飛ばされて分割されない
+          const interval = setInterval(() => {
+            const elapsed = Date.now() - lastRotateAtRef.current
+            if (elapsed >= chunkIntervalMs) {
+              console.log('分割タイミング到達:', Math.round(elapsed / 1000), '秒経過')
+              rotateRecorder()
+            }
+          }, 1000)
+          setChunkInterval(interval)
           setIsRecording(true)
           setChunkNumber(0)
           
@@ -216,19 +286,35 @@ const Recording: React.FC = () => {
 
   const stopRecordingHandler = async () => {
     try {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop()
+      // 停止処理中にチャンクが切り替わらないよう、先にタイマーを止める
+      if (chunkInterval) {
+        clearInterval(chunkInterval)
+        setChunkInterval(null)
       }
 
-      // タブ系は停止時の一括アップロード完了を待つ
-      if (captureMode === 'tab' || captureMode === 'tabmix') {
-        await new Promise((r) => setTimeout(r, 50))
-        if (finalUploadPromiseRef.current) {
-          try { await finalUploadPromiseRef.current } catch {}
-          finalUploadPromiseRef.current = null
-        }
+      // 最後のチャンクを確定させる。onstop は ondataavailable の後に発火する
+      const recorder = mediaRecorderRef.current
+      if (recorder && recorder.state === 'recording') {
+        await new Promise<void>((resolve) => {
+          const finish = () => resolve()
+          recorder.onstop = finish
+          // onstop が来ない環境でも停止処理を進めるための保険
+          setTimeout(finish, 3000)
+          recorder.stop()
+        })
       }
-      
+
+      // 全チャンクのアップロード完了を待ってから /end を投げる。
+      // 待たずに投げると、サーバ側がチャンク未着のまま要約処理を始めてしまう
+      if (pendingUploadsRef.current.length > 0) {
+        console.log('アップロード完了を待機中:', pendingUploadsRef.current.length, '件')
+        await Promise.allSettled(pendingUploadsRef.current)
+        pendingUploadsRef.current = []
+        console.log('アップロード完了')
+      }
+
+      mediaRecorderRef.current = null
+
       if (stream.current) {
         stream.current.getTracks().forEach(track => track.stop())
       }
@@ -292,25 +378,22 @@ const Recording: React.FC = () => {
 
   // 停止時の一括アップロードは廃止（ondataavailableで逐次アップロード）
 
-  const handleChunkUpload = async (audioBlob: Blob) => {
+  // chunkIndex は呼び出し元から受け取る。state を参照すると
+  // ondataavailable のクロージャが初期値(0)を掴み、全チャンクが同じ番号になる
+  const handleChunkUpload = async (audioBlob: Blob, chunkIndex: number) => {
     try {
       if (!currentMeetingIdRef.current) {
         console.log('meetingIdが設定されていません')
         return
       }
-      
-      console.log('handleChunkUpload開始 - meetingId:', currentMeetingIdRef.current, 'chunkNumber:', chunkNumber)
+
+      console.log('handleChunkUpload開始 - meetingId:', currentMeetingIdRef.current, 'chunkNumber:', chunkIndex)
       console.log('音声データサイズ:', audioBlob.size, 'bytes')
-      
-      // currentMeetingIdRefを使用して直接APIを呼び出す
-      if (currentMeetingIdRef.current) {
-        const file = new File([audioBlob], `chunk_${chunkNumber}.webm`, { type: 'audio/webm' })
-        await recordingService.uploadChunk(currentMeetingIdRef.current, chunkNumber, file)
-      } else {
-        console.error('currentMeetingIdRefが設定されていません')
-      }
-      console.log('チャンクアップロード成功')
-      
+
+      const file = new File([audioBlob], `chunk_${chunkIndex}.webm`, { type: 'audio/webm' })
+      await recordingService.uploadChunk(currentMeetingIdRef.current, chunkIndex, file)
+      console.log('チャンクアップロード成功 - chunk', chunkIndex)
+
     } catch (error: any) {
       console.error('チャンクアップロードエラー:', error)
       console.error('エラー詳細:', error.response?.data || error.message)
@@ -403,6 +486,11 @@ const Recording: React.FC = () => {
                     🎚️ タブ＋マイク（プレミアム）
                   </button>
                 </div>
+                {(captureMode === 'tab' || captureMode === 'tabmix') && !isTabAudioSupported() && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: '#c0392b', fontWeight: 600 }}>
+                    ⚠️ ご利用中のブラウザはタブ音声録音に対応していません。Chrome または Edge で開き直してください。
+                  </p>
+                )}
                 {captureMode === 'tab' && (
                   <p style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
                     Chromeでのご利用を推奨します。共有ダイアログで録りたいタブを選び、「タブの音声を共有」を有効にしてください。
@@ -411,6 +499,11 @@ const Recording: React.FC = () => {
                 {captureMode === 'tabmix' && (
                   <p style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
                     タブの共有ダイアログで「タブの音声を共有」を有効にし、マイク権限も許可してください（エコーキャンセリング有効）。
+                  </p>
+                )}
+                {chunkIntervalSec !== DEFAULT_CHUNK_INTERVAL_MS / 1000 && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: '#b26a00', fontWeight: 600 }}>
+                    🧪 検証モード: {chunkIntervalSec}秒ごとに分割します（解除は ?chunkSec=0）
                   </p>
                 )}
               </div>
@@ -480,6 +573,12 @@ const Recording: React.FC = () => {
                   <span className="info-label">チャンク数:</span>
                   <span className="info-value">{chunkNumber + 1}</span>
                 </div>
+                {chunkIntervalSec !== DEFAULT_CHUNK_INTERVAL_MS / 1000 && (
+                  <div className="info-item">
+                    <span className="info-label">分割間隔:</span>
+                    <span className="info-value">{chunkIntervalSec}秒（検証モード）</span>
+                  </div>
+                )}
                 <div className="info-item">
                   <span className="info-label">プラン:</span>
                   <span className="info-value">{user?.is_premium ? 'プレミアム' : '無料'}</span>

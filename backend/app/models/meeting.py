@@ -21,6 +21,7 @@ class Meeting(Base):
     
     # 処理状況
     status = Column(String, default="recording")  # recording, processing, completed, error
+    error_message = Column(Text, nullable=True)   # status=error のときの失敗理由（利用者向け文言）
     whisper_tokens = Column(Integer, default=0)
     gpt_tokens = Column(Integer, default=0)
     

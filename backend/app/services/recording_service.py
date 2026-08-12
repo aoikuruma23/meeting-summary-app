@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.core.config import settings
 from app.models.meeting import Meeting, AudioChunk
+from app.models.user import User
 from app.services.whisper_service import WhisperService
 from app.services.summary_service import SummaryService
 
@@ -15,6 +16,7 @@ class RecordingService:
         self.upload_dir = settings.UPLOAD_DIR
         self.whisper_service = WhisperService()
         self.summary_service = SummaryService()
+        self._last_transcribe_error = None  # チャンク単位の文字起こし失敗理由（原因の引き継ぎ用）
         
         # アップロードディレクトリの作成
         os.makedirs(self.upload_dir, exist_ok=True)
@@ -50,40 +52,84 @@ class RecordingService:
     
     async def process_meeting(self, meeting_id: int, db: Optional[Session] = None):
         """議事録の処理（文字起こし・要約・保存）"""
+        # バックグラウンド実行ではセッションを自前で用意する。
+        # リクエストスコープのセッションを渡されると、レスポンス返却後に閉じられて処理が落ちる
+        owns_session = db is None
+        if owns_session:
+            db = SessionLocal()
+
         try:
-            # DB セッションを準備
-            if db is None:
-                db = next(get_db())
             # 議事録の確認
             meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
             if not meeting:
                 raise Exception("議事録が見つかりません")
-            
+
+            # 完了済みの再処理は行わない（成功した転写・要約を壊さないため）
+            if meeting.status == "completed":
+                print(f"DEBUG: 会議{meeting_id} は処理済みのためスキップします")
+                return meeting.drive_file_url
+
             # 1. 音声チャンクの文字起こし
+            self._last_transcribe_error = None
             transcription_text = await self._transcribe_chunks(meeting_id, db)
-            
+
             # 文字起こし結果が空の場合はダミー生成せずにエラー扱い
             if not transcription_text or not transcription_text.strip():
                 print("DEBUG: 文字起こしデータが空です。要約を中止します。")
+                # チャンク単位で失敗していた場合はその理由を引き継ぐ（原因が「無音」に化けるのを防ぐ）
+                if self._last_transcribe_error:
+                    raise Exception(self._last_transcribe_error)
                 raise Exception("文字起こしデータが空です")
             
             # 2. 要約の生成
             summary = await self._generate_summary(transcription_text)
             
             # 3. Google Driveへの保存
-            file_url = await self._save_to_drive(meeting_id, summary)
-            
-            # 4. データベースの更新
+            file_url = await self._save_to_drive(meeting_id, summary, db)
+
+            # 4. 利用回数の加算（処理が成功した時点でカウント。二重加算を防ぐため未完了時のみ）
+            if meeting.status != "completed":
+                user = db.query(User).filter(User.id == meeting.user_id).first()
+                if user:
+                    user.usage_count = (user.usage_count or 0) + 1
+                    db.commit()
+                    print(f"DEBUG: 利用回数を更新 - user_id: {user.id}, usage_count: {user.usage_count}")
+
+            # 5. データベースの更新
             await self._update_meeting_status(meeting_id, "completed", file_url, db)
 
-            # 5. 機密保護: 処理成功後は生音声を削除（転写・要約はDBに保存済み）
+            # 6. 機密保護: 処理成功後は生音声を削除（転写・要約はDBに保存済み）
             self._delete_meeting_audio(meeting_id)
 
             return file_url
-        
+
         except Exception as e:
-            await self._update_meeting_status(meeting_id, "error")
+            await self._update_meeting_status(meeting_id, "error", error_message=self._humanize_error(e))
             raise Exception(f"議事録の処理に失敗しました: {str(e)}")
+
+        finally:
+            if owns_session:
+                db.close()
+
+    def _humanize_error(self, error: Exception) -> str:
+        """例外を利用者向けの文言に変換する。原因が一目で分かることを優先する。"""
+        detail = str(error)
+
+        if "insufficient_quota" in detail or "credit_balance_exhausted" in detail:
+            return "AI処理の利用枠が不足しているため処理できませんでした。運営までお問い合わせください。"
+        if "invalid_api_key" in detail or "Incorrect API key" in detail:
+            return "AIサービスの認証に失敗しました。運営までお問い合わせください。"
+        if "rate_limit" in detail.lower():
+            return "AIサービスが混み合っています。しばらく時間をおいて再度お試しください。"
+        if "APIConnectionError" in detail or "Connection error" in detail:
+            return "AIサービスに接続できませんでした。時間をおいて再度お試しください。"
+        if "文字起こしデータが空です" in detail:
+            return "音声から文字を認識できませんでした。録音に音声が入っていたかご確認ください。"
+        if "Invalid file format" in detail:
+            return "録音データを読み取れませんでした。お手数ですが録音し直してください。"
+
+        # 想定外のエラー。APIキーが混入する余地を残さないため長さを制限する
+        return f"処理中にエラーが発生しました（{detail[:150]}）"
     
     async def _transcribe_chunks(self, meeting_id: int, db: Session) -> str:
         """音声チャンクの文字起こし"""
@@ -142,17 +188,19 @@ class RecordingService:
                     print(f"ファイルが見つかりません: {chunk.filename}")
             except Exception as e:
                 print(f"チャンク {chunk.filename} の文字起こしに失敗: {str(e)}")
+                # 全チャンクが失敗したときに原因を伝えられるよう最後のエラーを保持する
+                self._last_transcribe_error = str(e)
                 chunk.status = "error"
                 db.commit()
         
         print(f"DEBUG: 文字起こし完了数: {len(transcriptions)}")
         
         # 議事録のWhisperトークン数・全文転写を更新
+        # 転写が1件も取れなかった場合は、過去に成功した転写を空で潰さない
         meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
-        if meeting:
+        if meeting and transcriptions:
             meeting.whisper_tokens = total_whisper_tokens
-            full_transcript = "\n".join(transcriptions)
-            meeting.transcript = full_transcript
+            meeting.transcript = "\n".join(transcriptions)
             db.commit()
         
         # 全文字起こしを結合
@@ -172,13 +220,11 @@ class RecordingService:
             print(f"DEBUG: 要約生成エラー - {str(e)}")
             raise Exception(f"要約の生成に失敗しました: {str(e)}")
     
-    async def _save_to_drive(self, meeting_id: int, summary: str) -> str:
+    async def _save_to_drive(self, meeting_id: int, summary: str, db: Session) -> str:
         """要約をデータベースに保存"""
         try:
             print(f"DEBUG: 要約データベース保存開始 - meeting_id: {meeting_id}")
-            
-            # データベースに要約を保存
-            db = next(get_db())
+
             meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
             
             if meeting:
@@ -196,21 +242,28 @@ class RecordingService:
             print(f"DEBUG: エラー詳細: {traceback.format_exc()}")
             raise Exception(f"要約の保存に失敗しました: {str(e)}")
     
-    async def _update_meeting_status(self, meeting_id: int, status: str, file_url: str = None, db: Session = None):
+    async def _update_meeting_status(self, meeting_id: int, status: str, file_url: str = None, db: Session = None, error_message: str = None):
         """議事録のステータスを更新"""
+        owns_session = db is None
+        if owns_session:
+            db = SessionLocal()
+
         try:
-            if db is None:
-                db = next(get_db())
-            
             meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
             if meeting:
                 meeting.status = status
                 if file_url:
                     meeting.drive_file_url = file_url
+                # 成功時は過去の失敗理由を消し、失敗時のみ理由を残す
+                meeting.error_message = error_message if status == "error" else None
                 db.commit()
-        
+
         except Exception as e:
             print(f"議事録ステータスの更新に失敗: {str(e)}")
+
+        finally:
+            if owns_session:
+                db.close()
     
     def get_chunk_files(self, meeting_id: int) -> List[str]:
         """会議IDに対応するチャンクファイルを取得"""

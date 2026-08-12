@@ -93,6 +93,23 @@ def run_migration():
                 else:
                     print("ℹ line_user_idカラムは既に存在します")
             
+            # meetings テーブル: error_message カラムを追加（失敗理由の保存用）
+            if is_postgresql:
+                result = db.execute(text("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'meetings' AND table_schema = 'public'
+                """))
+            else:
+                result = db.execute(text("PRAGMA table_info(meetings)"))
+            meeting_columns = [row[0] if is_postgresql else row[1] for row in result.fetchall()]
+
+            if "error_message" not in meeting_columns:
+                db.execute(text("ALTER TABLE meetings ADD COLUMN error_message TEXT"))
+                print("✓ meetings.error_messageカラムを追加しました")
+            else:
+                print("ℹ meetings.error_messageカラムは既に存在します")
+
             # 既存のline_idカラムをline_user_idにリネーム（存在する場合）
             try:
                 db.execute(text("ALTER TABLE users RENAME COLUMN line_id TO line_user_id"))

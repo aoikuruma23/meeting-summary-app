@@ -197,6 +197,30 @@
   text-align: center;
 }
 
+.meeting-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: #fdecea;
+  border-left: 4px solid #d93025;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.meeting-error-icon {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.meeting-error-text {
+  color: #8b1a12;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .stat-icon {
   display: block;
   font-size: 1.5rem;

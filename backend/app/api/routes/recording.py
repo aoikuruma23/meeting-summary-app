@@ -17,6 +17,14 @@ from app.middleware.auth import get_current_user
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
+def _log_background_result(task):
+    """バックグラウンド処理の例外を握りつぶさずログに残す"""
+    try:
+        task.result()
+    except Exception as e:
+        print(f"バックグラウンド要約処理でエラー: {str(e)}")
+
 # レスポンスモデル
 class RecordingResponse(BaseModel):
     success: bool
@@ -31,6 +39,7 @@ class MeetingResponse(BaseModel):
     created_at: datetime
     whisper_tokens: Optional[int] = None
     gpt_tokens: Optional[int] = None
+    error_message: Optional[str] = None
 
 class StartRecordingRequest(BaseModel):
     title: str
@@ -237,10 +246,12 @@ async def upload_chunk(
                 meeting.status = "processing"
                 db.commit()
                 print(f"DEBUG: 初回チャンク受領により要約処理を非同期開始 - meeting_id: {meeting_id}")
-                recording_service = RecordingService()
-                asyncio.create_task(recording_service.process_meeting(meeting_id, db))
-        except Exception as _:
-            pass
+                # db は渡さない。リクエスト終了で閉じられ、バックグラウンド処理が落ちるため
+                # （process_meeting 側が自前のセッションを用意する）
+                task = asyncio.create_task(RecordingService().process_meeting(meeting_id))
+                task.add_done_callback(_log_background_result)
+        except Exception as e:
+            print(f"バックグラウンド要約処理の起動に失敗: {str(e)}")
         
         return RecordingResponse(
             success=True,
@@ -298,13 +309,9 @@ async def end_recording(
         db.commit()
         
         # 要約処理を開始（非同期）
+        # 利用回数は処理成功時に RecordingService.process_meeting 側で加算する
         recording_service = RecordingService()
-        
-        # 利用回数を先に増加（録音が完了した時点でカウント）
-        user.usage_count += 1
-        db.commit()
-        print(f"DEBUG: 利用回数を更新 - user_id: {user.id}, usage_count: {user.usage_count}")
-        
+
         try:
             # チャンクがアップロードされるまでポーリング（最大30秒）
             import asyncio
@@ -394,7 +401,8 @@ async def get_recording_status(
                     drive_file_url=meeting.drive_file_url,
                     created_at=meeting.created_at,
                     whisper_tokens=meeting.whisper_tokens,
-                    gpt_tokens=meeting.gpt_tokens
+                    gpt_tokens=meeting.gpt_tokens,
+                    error_message=meeting.error_message
                 ).dict()
             }
         )
@@ -434,7 +442,8 @@ async def get_recording_list(
                         drive_file_url=meeting.drive_file_url,
                         created_at=meeting.created_at,
                         whisper_tokens=meeting.whisper_tokens,
-                        gpt_tokens=meeting.gpt_tokens
+                        gpt_tokens=meeting.gpt_tokens,
+                        error_message=meeting.error_message
                     ).dict()
                     for meeting in meetings
                 ]

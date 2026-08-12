@@ -17,6 +17,7 @@ interface Meeting {
   created_at: string
   whisper_tokens: number
   gpt_tokens: number
+  error_message?: string | null
 }
 
 const History: React.FC = () => {
@@ -268,6 +269,15 @@ const History: React.FC = () => {
                     <span className="stat-value">{getProcessingTime(meeting.gpt_tokens || 0)}</span>
                   </div>
                 </div>
+
+                {meeting.status === 'error' && (
+                  <div className="meeting-error">
+                    <span className="meeting-error-icon">⚠️</span>
+                    <span className="meeting-error-text">
+                      {meeting.error_message || '処理に失敗しました。詳しい理由は記録されていません。'}
+                    </span>
+                  </div>
+                )}
               </div>
               
               <div className="meeting-actions">
