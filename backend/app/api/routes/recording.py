@@ -193,11 +193,8 @@ async def upload_chunk(
             jst = timezone(timedelta(hours=9))
             current_time = datetime.now(jst)
 
-            # 録音開始時刻を現在時刻に更新（初回チャンクの場合）
-            if chunk_number == 0:
-                meeting.created_at = current_time
-                db.commit()
-                print(f"DEBUG: 録音開始時刻を更新 - meeting_id: {meeting_id}")
+            # created_at は録音開始時刻（/start で設定済み）。ここで上書きすると
+            # 履歴に出る日時が「録音終了時刻」になり、経過時間の判定も初回チャンク基準にずれる
 
             # meeting.created_at がタイムゾーンなしの場合に備えて補正
             meeting_created_at = meeting.created_at
@@ -206,8 +203,12 @@ async def upload_chunk(
                 # これによりUTC保存時の+9時間ズレ（540分）問題を回避
                 meeting_created_at = meeting_created_at.replace(tzinfo=timezone.utc).astimezone(jst)
 
+            # フロント側は max_duration ちょうどで自動停止するため、最終チャンクは
+            # 必ず制限時間を数秒〜数十秒過ぎて届く。ここで弾くと最後の音声を丸ごと失う。
+            # サーバ側はあくまで暴走クライアント対策の保険として余裕を持たせる
+            GRACE_MINUTES = 5
             elapsed_minutes = (current_time - meeting_created_at).total_seconds() / 60
-            if elapsed_minutes >= meeting.max_duration:
+            if elapsed_minutes >= meeting.max_duration + GRACE_MINUTES:
                 # 録音時間制限に達した場合、録音を自動停止
                 meeting.status = "completed"
                 db.commit()

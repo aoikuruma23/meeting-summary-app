@@ -142,12 +142,14 @@ const History: React.FC = () => {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // サーバは JST の値を保存しているが、PostgreSQL 側で UTC に変換され、
+    // タイムゾーン情報なしの文字列として返ってくる。明示的に UTC として解釈する。
+    // 手動で +9時間 足す方式だと、閲覧者の端末が JST 以外のときや
+    // API がタイムゾーン付きで返すようになったときに二重変換でずれる
+    const hasTimezone = /(Z|[+-]\d{2}:?\d{2})$/.test(dateString)
+    const date = new Date(hasTimezone ? dateString : `${dateString}Z`)
     
-    // 日本時間（JST）に変換
-    const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
-    
-    return jstDate.toLocaleDateString('ja-JP', {
+    return date.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

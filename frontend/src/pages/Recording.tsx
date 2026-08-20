@@ -60,6 +60,10 @@ const Recording: React.FC = () => {
   const currentMeetingIdRef = useRef<number | null>(null)
   const [captureMode, setCaptureMode] = useState<'mic' | 'tab' | 'tabmix'>('mic')
   const [chunkIntervalSec, setChunkIntervalSec] = useState(DEFAULT_CHUNK_INTERVAL_MS / 1000)
+  // 端末側で録音が止まっていることを利用者に伝えるための警告
+  const [captureWarning, setCaptureWarning] = useState<string | null>(null)
+  // 実際に音声が録れていた秒数（録音時間と乖離したら端末側で中断されている）
+  const [capturedSec, setCapturedSec] = useState(0)
   
   // 録音時間関連
   const [recordingTime, setRecordingTime] = useState(0)
@@ -78,6 +82,30 @@ const Recording: React.FC = () => {
   const lastRotateAtRef = useRef(0)
   // 停止時に完了を待つため、進行中のアップロードを保持する
   const pendingUploadsRef = useRef<Promise<void>[]>([])
+  // 「録音していたつもりの時間」と「実際に音声が録れていた時間」を突き合わせるための計測値
+  const recordingStartedAtRef = useRef(0)
+  const capturedMsRef = useRef(0)
+  const lastTickAtRef = useRef(0)
+  const uploadFailuresRef = useRef(0)
+  const isStoppingRef = useRef(false)
+  // 画面消灯によるページ凍結を防ぐための Screen Wake Lock
+  const wakeLockRef = useRef<any>(null)
+  // タイマーIDは ref でも保持する。state だけだと、録音開始時に作った
+  // クロージャが掴む stopRecordingHandler はタイマー登録前のレンダーのもの（＝null）で、
+  // 自動停止時に clearInterval が空振りしてタイマーが動き続ける
+  const chunkIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearTimers = () => {
+    if (chunkIntervalRef.current) {
+      clearInterval(chunkIntervalRef.current)
+      chunkIntervalRef.current = null
+    }
+    if (timeIntervalRef.current) {
+      clearInterval(timeIntervalRef.current)
+      timeIntervalRef.current = null
+    }
+  }
 
   useEffect(() => {
     if (!user) {
@@ -88,6 +116,50 @@ const Recording: React.FC = () => {
   // 検証用の分割間隔設定を画面に反映する
   useEffect(() => {
     setChunkIntervalSec(getChunkIntervalMs() / 1000)
+  }, [])
+
+  // スマホの画面が消えるとブラウザがページを凍結し、分割タイマーもマイク取得も止まる。
+  // Screen Wake Lock で画面を保持することでこれを防ぐ（Android Chrome で有効）
+  const requestWakeLock = async () => {
+    try {
+      if (!('wakeLock' in navigator)) {
+        console.log('WakeLock 非対応のブラウザです')
+        return
+      }
+      wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      console.log('WakeLock を取得しました')
+    } catch (error) {
+      console.warn('WakeLock の取得に失敗:', error)
+    }
+  }
+
+  const releaseWakeLock = async () => {
+    try {
+      await wakeLockRef.current?.release()
+    } catch {}
+    wakeLockRef.current = null
+  }
+
+  // WakeLock はタブが非表示になると OS 側で解除されるため、表示に戻るたびに取り直す
+  useEffect(() => {
+    if (!isRecording) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isRecording])
+
+  // 録音画面から離れたときに画面ロックとタイマーを残さない
+  useEffect(() => {
+    return () => {
+      releaseWakeLock()
+      clearTimers()
+    }
   }, [])
 
   // チャンクごとに MediaRecorder を作り直す。
@@ -110,6 +182,9 @@ const Recording: React.FC = () => {
   const rotateRecorder = () => {
     const current = mediaRecorderRef.current
     if (!current || current.state !== 'recording' || !stream.current) {
+      // ここに来る＝端末側で録音が止まっている。無言で捨てると原因が追えない
+      console.warn('分割をスキップしました - recorder.state:', current?.state, ' stream:', !!stream.current)
+      setCaptureWarning('端末側で録音が中断されています。画面を点けたまま、この画面を前面に置いてください。')
       return
     }
 
@@ -232,36 +307,68 @@ const Recording: React.FC = () => {
           const firstRecorder = createRecorder(mediaStream, 0)
           firstRecorder.start()
           mediaRecorderRef.current = firstRecorder
-          lastRotateAtRef.current = Date.now()
+          const startedAt = Date.now()
+          lastRotateAtRef.current = startedAt
+          recordingStartedAtRef.current = startedAt
+          lastTickAtRef.current = startedAt
+          capturedMsRef.current = 0
+          uploadFailuresRef.current = 0
+          isStoppingRef.current = false
+          setCapturedSec(0)
+          setCaptureWarning(null)
+          requestWakeLock()
 
           // 1秒ごとに経過時間で判定する。
           // 録音中はアプリのタブが非アクティブになるためタイマーが間引かれる。
           // setInterval(rotate, 間隔) だと発火自体が飛ばされて分割されない
           const interval = setInterval(() => {
-            const elapsed = Date.now() - lastRotateAtRef.current
+            const now = Date.now()
+
+            // 実際に音声が録れていた時間を積み上げる。
+            // ページが凍結されると tick 自体が飛ぶため、1回で加算できる上限を tick間隔の2倍に制限する。
+            // こうすると「凍結されていた時間」は加算されず、後から欠損を検知できる
+            const sinceLastTick = now - lastTickAtRef.current
+            lastTickAtRef.current = now
+            const recorderActive = mediaRecorderRef.current?.state === 'recording'
+            const trackLive = stream.current
+              ? stream.current.getAudioTracks().some(t => t.readyState === 'live' && !t.muted)
+              : false
+            if (recorderActive && trackLive) {
+              capturedMsRef.current += Math.min(sinceLastTick, 2000)
+            }
+            if (sinceLastTick > 5000) {
+              console.warn('タイマーが', Math.round(sinceLastTick / 1000), '秒間停止していました（バックグラウンド凍結の可能性）')
+              setCaptureWarning('画面が消えている間、録音が中断された可能性があります。画面を点けたままにしてください。')
+            }
+
+            const elapsed = now - lastRotateAtRef.current
             if (elapsed >= chunkIntervalMs) {
               console.log('分割タイミング到達:', Math.round(elapsed / 1000), '秒経過')
               rotateRecorder()
             }
           }, 1000)
           setChunkInterval(interval)
+          chunkIntervalRef.current = interval
           setIsRecording(true)
           setChunkNumber(0)
           
-          // 録音時間のカウントダウン開始
+          // 経過時間は Date.now() から算出する。
+          // prev+1 方式はバックグラウンドで tick が間引かれた分だけ実時間から遅れ、
+          // 表示がずれるうえに録音時間制限の自動停止も効かなくなる
           const timeInterval = setInterval(() => {
-            setRecordingTime(prev => {
-              const newTime = prev + 1
-              // 制限時間に達した場合、録音を自動停止
-              if (maxDuration && newTime >= maxDuration * 60) {
-                stopRecordingHandler()
-                return prev
-              }
-              return newTime
-            })
+            const elapsedSec = Math.floor((Date.now() - recordingStartedAtRef.current) / 1000)
+            setRecordingTime(elapsedSec)
+            setCapturedSec(Math.floor(capturedMsRef.current / 1000))
+
+            // 制限時間に達した場合、録音を自動停止（多重呼び出しを防ぐ）
+            if (maxDuration && elapsedSec >= maxDuration * 60 && !isStoppingRef.current) {
+              isStoppingRef.current = true
+              stopRecordingHandler()
+            }
           }, 1000) // 1秒ごと
           
           setTimeInterval(timeInterval)
+          timeIntervalRef.current = timeInterval
         }, 100)
       }
     } catch (error) {
@@ -284,13 +391,25 @@ const Recording: React.FC = () => {
     }
   }
 
+  // 欠損の警告文で使う。1分未満は秒で出さないと「約0分」になって意味が伝わらない
+  const formatDurationJa = (ms: number) => {
+    return ms < 60000 ? `${Math.round(ms / 1000)}秒` : `${Math.round(ms / 60000)}分`
+  }
+
   const stopRecordingHandler = async () => {
     try {
+      isStoppingRef.current = true
+
       // 停止処理中にチャンクが切り替わらないよう、先にタイマーを止める
+      clearTimers()
+
+      // 経過時間はここで確定させる。この後のアップロード完了待ち（数十秒になり得る）を
+      // 含めてしまうと「取得できた音声」との比較がずれ、正常な録音でも警告が出る
+      const elapsedMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0
       if (chunkInterval) {
         clearInterval(chunkInterval)
-        setChunkInterval(null)
       }
+      setChunkInterval(null)
 
       // 最後のチャンクを確定させる。onstop は ondataavailable の後に発火する
       const recorder = mediaRecorderRef.current
@@ -315,6 +434,33 @@ const Recording: React.FC = () => {
 
       mediaRecorderRef.current = null
 
+      // 実際に録れた音声が録音時間より大幅に短い場合、端末側で録音が中断されている。
+      // 黙って「完了」にすると、欠けた議事録を正しいものとして渡してしまう
+      const capturedMs = capturedMsRef.current
+      const failures = uploadFailuresRef.current
+      console.log('録音時間:', Math.round(elapsedMs / 1000), '秒 / 取得できた音声:', Math.round(capturedMs / 1000), '秒 / アップロード失敗:', failures, '件')
+
+      if (elapsedMs > 60000 && capturedMs < elapsedMs * 0.8) {
+        alert(
+          [
+            '⚠️ 録音の一部が端末側で取得できていません。',
+            '',
+            `録音時間: 約${formatDurationJa(elapsedMs)}`,
+            `実際に取得できた音声: 約${formatDurationJa(capturedMs)}`,
+            '',
+            'スマートフォンの画面が消えると、ブラウザが録音を一時停止することがあります。',
+            '録音中は画面を点けたまま、この画面を前面に置いたままにしてください。'
+          ].join('\n')
+        )
+      } else if (failures > 0) {
+        alert(
+          [
+            `⚠️ 音声の送信に${failures}件失敗しました。`,
+            '通信状況の良い場所で録音し直すことをおすすめします。'
+          ].join('\n')
+        )
+      }
+
       if (stream.current) {
         stream.current.getTracks().forEach(track => track.stop())
       }
@@ -331,15 +477,13 @@ const Recording: React.FC = () => {
         audioContextRef.current = null
       }
       
-      if (chunkInterval) {
-        clearInterval(chunkInterval)
-      }
-      
       if (timeInterval) {
         clearInterval(timeInterval)
       }
+      setTimeInterval(null)
       
       setIsRecording(false)
+      releaseWakeLock()
       
       // 録音終了APIを呼び出し
       if (currentMeetingId) {
@@ -352,6 +496,10 @@ const Recording: React.FC = () => {
       setCurrentMeetingId(null)
       currentMeetingIdRef.current = null
       setChunkNumber(0)
+      recordingStartedAtRef.current = 0
+      capturedMsRef.current = 0
+      uploadFailuresRef.current = 0
+      setCapturedSec(0)
       
       // 録音コンテキストをリセット
       resetRecording()
@@ -372,6 +520,8 @@ const Recording: React.FC = () => {
       
     } catch (error) {
       console.error('録音停止エラー:', error)
+      isStoppingRef.current = false
+      releaseWakeLock()
       alert('録音の停止中にエラーが発生しました。')
     }
   }
@@ -397,6 +547,9 @@ const Recording: React.FC = () => {
     } catch (error: any) {
       console.error('チャンクアップロードエラー:', error)
       console.error('エラー詳細:', error.response?.data || error.message)
+      // 無言で捨てない。停止時にまとめて利用者に伝える
+      uploadFailuresRef.current += 1
+      setCaptureWarning('音声の送信に失敗した区間があります。通信状況をご確認ください。')
     }
   }
 
@@ -544,6 +697,14 @@ const Recording: React.FC = () => {
           </div>
         ) : (
           <div className="recording-active">
+            {captureWarning && (
+              <div style={{ background: '#fdecea', border: '1px solid #e74c3c', color: '#a93226', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 14, fontWeight: 600, lineHeight: 1.6 }}>
+                ⚠️ {captureWarning}
+              </div>
+            )}
+            <div style={{ background: '#fff8e1', border: '1px solid #f0c419', color: '#7d6608', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>
+              📱 録音中は<strong>画面を消さず</strong>、この画面を前面に置いたままにしてください。画面が消えるとブラウザが録音を止めることがあります。
+            </div>
             <div className="recording-status">
               <div className="status-indicator recording">
                 <div className="pulse-dot"></div>
@@ -572,6 +733,12 @@ const Recording: React.FC = () => {
                 <div className="info-item">
                   <span className="info-label">チャンク数:</span>
                   <span className="info-value">{chunkNumber + 1}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">取得できた音声:</span>
+                  <span className="info-value" style={{ color: recordingTime > 60 && capturedSec < recordingTime * 0.8 ? '#c0392b' : undefined }}>
+                    {formatTime(capturedSec)}
+                  </span>
                 </div>
                 {chunkIntervalSec !== DEFAULT_CHUNK_INTERVAL_MS / 1000 && (
                   <div className="info-item">
