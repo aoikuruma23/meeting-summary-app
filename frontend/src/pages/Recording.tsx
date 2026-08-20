@@ -47,6 +47,46 @@ const isTabAudioSupported = (): boolean => {
   return !isFirefox && !isSafari
 }
 
+// 画面を消しても録音を続けるための keep-alive 音源。
+// ブラウザは「音を再生しているページ」を凍結対象から外すが、完全な無音（全ゼロ）は
+// 音量メーターの閾値（おおよそ -72dBFS）を下回り「再生していない」と判定される。
+// そのため、人間には聞こえないが閾値は超える極小振幅（-66dBFS 相当）の正弦波を使う。
+// この音量は静かな室内の暗騒音より低く、録音内容に影響しない
+const createKeepAliveAudioUrl = (): string => {
+  const sampleRate = 8000
+  const frames = sampleRate // 1秒ぶんをループ再生する
+  const buffer = new ArrayBuffer(44 + frames * 2)
+  const view = new DataView(buffer)
+
+  const writeString = (offset: number, text: string) => {
+    for (let i = 0; i < text.length; i++) {
+      view.setUint8(offset + i, text.charCodeAt(i))
+    }
+  }
+
+  // WAVヘッダ（16bit PCM モノラル）
+  writeString(0, 'RIFF')
+  view.setUint32(4, 36 + frames * 2, true)
+  writeString(8, 'WAVE')
+  writeString(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * 2, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  writeString(36, 'data')
+  view.setUint32(40, frames * 2, true)
+
+  // 100Hz・振幅16/32768（≒ -66dBFS）。ループの継ぎ目で不連続にならない周波数を選ぶ
+  for (let i = 0; i < frames; i++) {
+    view.setInt16(44 + i * 2, Math.round(Math.sin((2 * Math.PI * 100 * i) / sampleRate) * 16), true)
+  }
+
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }))
+}
+
 const Recording: React.FC = () => {
   const { user, updateUser } = useAuth()
   const { recordingState: _, startRecording, stopRecording, uploadChunk: __, resetRecording } = useRecording()
@@ -90,6 +130,9 @@ const Recording: React.FC = () => {
   const isStoppingRef = useRef(false)
   // 画面消灯によるページ凍結を防ぐための Screen Wake Lock
   const wakeLockRef = useRef<any>(null)
+  // 電源ボタンで画面を消された場合の保険。WakeLock は手動ロックでは効かない
+  const keepAliveAudioRef = useRef<HTMLAudioElement | null>(null)
+  const keepAliveUrlRef = useRef<string | null>(null)
   // タイマーIDは ref でも保持する。state だけだと、録音開始時に作った
   // クロージャが掴む stopRecordingHandler はタイマー登録前のレンダーのもの（＝null）で、
   // 自動停止時に clearInterval が空振りしてタイマーが動き続ける
@@ -140,6 +183,64 @@ const Recording: React.FC = () => {
     wakeLockRef.current = null
   }
 
+  // WakeLock は「自動で画面が消えるのを防ぐ」だけで、電源ボタンによる手動ロックでは解除される。
+  // その場合の保険として、極小音量のループ再生と MediaSession でページを
+  // 「メディア再生中」の状態に保ち、ブラウザ/OS に凍結させない
+  const startKeepAlive = async () => {
+    try {
+      if (keepAliveAudioRef.current) return
+
+      const url = createKeepAliveAudioUrl()
+      keepAliveUrlRef.current = url
+
+      const audio = new Audio(url)
+      audio.loop = true
+      // volume を 0 にすると「音を出していない」と判定されるため下げすぎない
+      audio.volume = 1
+      // OS 側から一時停止されても録音中は鳴らし直す
+      audio.onpause = () => {
+        if (keepAliveAudioRef.current === audio) {
+          audio.play().catch(() => {})
+        }
+      }
+
+      await audio.play()
+      keepAliveAudioRef.current = audio
+      console.log('keep-alive 音声の再生を開始しました')
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '録音中',
+          artist: '会議要約アプリ'
+        })
+        navigator.mediaSession.playbackState = 'playing'
+        // 通知の再生/停止ボタンで録音が止まらないようにする
+        navigator.mediaSession.setActionHandler('pause', () => {})
+        navigator.mediaSession.setActionHandler('play', () => {})
+      }
+    } catch (error) {
+      console.warn('keep-alive 音声の再生に失敗:', error)
+    }
+  }
+
+  const stopKeepAlive = () => {
+    // 先に ref を外す。onpause が再生し直してしまうため
+    const audio = keepAliveAudioRef.current
+    keepAliveAudioRef.current = null
+    try {
+      audio?.pause()
+    } catch {}
+
+    if (keepAliveUrlRef.current) {
+      URL.revokeObjectURL(keepAliveUrlRef.current)
+      keepAliveUrlRef.current = null
+    }
+
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'none'
+    }
+  }
+
   // WakeLock はタブが非表示になると OS 側で解除されるため、表示に戻るたびに取り直す
   useEffect(() => {
     if (!isRecording) return
@@ -147,6 +248,7 @@ const Recording: React.FC = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         requestWakeLock()
+        startKeepAlive()
       }
     }
 
@@ -158,6 +260,7 @@ const Recording: React.FC = () => {
   useEffect(() => {
     return () => {
       releaseWakeLock()
+      stopKeepAlive()
       clearTimers()
     }
   }, [])
@@ -317,6 +420,7 @@ const Recording: React.FC = () => {
           setCapturedSec(0)
           setCaptureWarning(null)
           requestWakeLock()
+          startKeepAlive()
 
           // 1秒ごとに経過時間で判定する。
           // 録音中はアプリのタブが非アクティブになるためタイマーが間引かれる。
@@ -484,6 +588,7 @@ const Recording: React.FC = () => {
       
       setIsRecording(false)
       releaseWakeLock()
+      stopKeepAlive()
       
       // 録音終了APIを呼び出し
       if (currentMeetingId) {
@@ -522,6 +627,7 @@ const Recording: React.FC = () => {
       console.error('録音停止エラー:', error)
       isStoppingRef.current = false
       releaseWakeLock()
+      stopKeepAlive()
       alert('録音の停止中にエラーが発生しました。')
     }
   }
