@@ -272,7 +272,8 @@ const History: React.FC = () => {
                   </div>
                 </div>
 
-                {meeting.status === 'error' && (
+                {/* 失敗時だけでなく、完了していても一部欠損の警告があれば必ず出す */}
+                {(meeting.status === 'error' || meeting.error_message) && (
                   <div className="meeting-error">
                     <span className="meeting-error-icon">⚠️</span>
                     <span className="meeting-error-text">

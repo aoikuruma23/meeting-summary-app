@@ -127,6 +127,8 @@ const Recording: React.FC = () => {
   const capturedMsRef = useRef(0)
   const lastTickAtRef = useRef(0)
   const uploadFailuresRef = useRef(0)
+  // 端末側で作られたチャンクの総数（サーバ受信数と突き合わせて欠損を検知する）
+  const producedChunksRef = useRef(0)
   const isStoppingRef = useRef(false)
   // 画面消灯によるページ凍結を防ぐための Screen Wake Lock
   const wakeLockRef = useRef<any>(null)
@@ -416,6 +418,7 @@ const Recording: React.FC = () => {
           lastTickAtRef.current = startedAt
           capturedMsRef.current = 0
           uploadFailuresRef.current = 0
+          producedChunksRef.current = 0
           isStoppingRef.current = false
           setCapturedSec(0)
           setCaptureWarning(null)
@@ -592,7 +595,7 @@ const Recording: React.FC = () => {
       
       // 録音終了APIを呼び出し
       if (currentMeetingId) {
-        await stopRecording()
+        await stopRecording(producedChunksRef.current)
       }
       
       // 状態をリセット
@@ -604,6 +607,7 @@ const Recording: React.FC = () => {
       recordingStartedAtRef.current = 0
       capturedMsRef.current = 0
       uploadFailuresRef.current = 0
+      producedChunksRef.current = 0
       setCapturedSec(0)
       
       // 録音コンテキストをリセット
@@ -636,27 +640,61 @@ const Recording: React.FC = () => {
 
   // chunkIndex は呼び出し元から受け取る。state を参照すると
   // ondataavailable のクロージャが初期値(0)を掴み、全チャンクが同じ番号になる
+  // 再送しても無駄なエラー（リクエスト内容そのものが不正）かどうか。
+  // 認証切れ・サイズ超過・時間制限などは何度送っても同じ結果になる
+  const isPermanentUploadError = (error: any): boolean => {
+    const status = error?.response?.status
+    return typeof status === 'number' && status >= 400 && status < 500
+  }
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+  // 1回の失敗で10分ぶんの音声を失わないよう再送する。
+  // サーバの再起動や一時的な電波の途切れは数十秒で復帰するため、
+  // 段階的に間隔を空けながら合計1分ほど粘る
+  const UPLOAD_RETRY_DELAYS_MS = [3000, 8000, 20000, 30000]
+
   const handleChunkUpload = async (audioBlob: Blob, chunkIndex: number) => {
-    try {
-      if (!currentMeetingIdRef.current) {
-        console.log('meetingIdが設定されていません')
-        return
-      }
-
-      console.log('handleChunkUpload開始 - meetingId:', currentMeetingIdRef.current, 'chunkNumber:', chunkIndex)
-      console.log('音声データサイズ:', audioBlob.size, 'bytes')
-
-      const file = new File([audioBlob], `chunk_${chunkIndex}.webm`, { type: 'audio/webm' })
-      await recordingService.uploadChunk(currentMeetingIdRef.current, chunkIndex, file)
-      console.log('チャンクアップロード成功 - chunk', chunkIndex)
-
-    } catch (error: any) {
-      console.error('チャンクアップロードエラー:', error)
-      console.error('エラー詳細:', error.response?.data || error.message)
-      // 無言で捨てない。停止時にまとめて利用者に伝える
-      uploadFailuresRef.current += 1
-      setCaptureWarning('音声の送信に失敗した区間があります。通信状況をご確認ください。')
+    if (!currentMeetingIdRef.current) {
+      console.log('meetingIdが設定されていません')
+      return
     }
+
+    producedChunksRef.current += 1
+
+    console.log('handleChunkUpload開始 - meetingId:', currentMeetingIdRef.current, 'chunkNumber:', chunkIndex)
+    console.log('音声データサイズ:', audioBlob.size, 'bytes')
+
+    const file = new File([audioBlob], `chunk_${chunkIndex}.webm`, { type: 'audio/webm' })
+
+    for (let attempt = 0; attempt <= UPLOAD_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        await recordingService.uploadChunk(currentMeetingIdRef.current, chunkIndex, file)
+        console.log('チャンクアップロード成功 - chunk', chunkIndex, attempt > 0 ? `(${attempt}回目の再送)` : '')
+        if (attempt > 0) {
+          setCaptureWarning(null)
+        }
+        return
+      } catch (error: any) {
+        console.error(`チャンクアップロードエラー - chunk ${chunkIndex} (試行${attempt + 1}回目):`, error)
+        console.error('エラー詳細:', error.response?.data || error.message)
+
+        if (isPermanentUploadError(error)) {
+          console.error('再送しても解決しないエラーのため中止します')
+          break
+        }
+        if (attempt >= UPLOAD_RETRY_DELAYS_MS.length) {
+          break
+        }
+
+        setCaptureWarning('音声の送信に失敗しました。再送しています…')
+        await sleep(UPLOAD_RETRY_DELAYS_MS[attempt])
+      }
+    }
+
+    // 無言で捨てない。停止時にまとめて利用者に伝える
+    uploadFailuresRef.current += 1
+    setCaptureWarning('音声の送信に失敗した区間があります。通信状況をご確認ください。')
   }
 
   const formatTime = (seconds: number) => {

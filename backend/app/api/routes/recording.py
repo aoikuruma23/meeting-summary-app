@@ -50,6 +50,8 @@ class UploadChunkRequest(BaseModel):
 
 class EndRecordingRequest(BaseModel):
     meeting_id: int
+    # 端末側が作ったチャンク数。サーバの受信数と食い違えば要約が一部だけだと分かる
+    expected_chunks: Optional[int] = None
 
 class ExportRequest(BaseModel):
     meeting_id: int
@@ -337,6 +339,21 @@ async def end_recording(
                 # ステータスを完了に変更
                 meeting.status = "completed"
                 db.commit()
+
+                # 端末が送ったはずの数と実際に届いた数が食い違う場合、要約は一部のみ。
+                # 「完了」とだけ表示すると、欠けた議事録を正しいものとして渡してしまう
+                received_chunks = db.query(AudioChunk).filter(
+                    AudioChunk.meeting_id == request.meeting_id
+                ).count()
+                expected_chunks = request.expected_chunks
+                if expected_chunks and received_chunks < expected_chunks:
+                    missing = expected_chunks - received_chunks
+                    meeting.error_message = (
+                        f"録音の一部がサーバに届きませんでした（{expected_chunks}件中{missing}件が欠落）。"
+                        "この要約は届いた範囲のみを対象にしています。"
+                    )
+                    db.commit()
+                    print(f"DEBUG: チャンク欠損を記録 - expected: {expected_chunks}, received: {received_chunks}")
             else:
                 # チャンクが1つも到着しない場合は処理待ちのままにする
                 print(f"DEBUG: チャンク未到着 - 後続のチャンクアップロードを待機（status=processingのまま） - meeting_id: {request.meeting_id}")

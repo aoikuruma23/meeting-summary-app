@@ -13,7 +13,7 @@ interface RecordingState {
 interface RecordingContextType {
   recordingState: RecordingState
   startRecording: (title: string, scheduledDuration?: number, participants?: string) => Promise<any>
-  stopRecording: () => Promise<void>
+  stopRecording: (expectedChunks?: number) => Promise<void>
   uploadChunk: (audioBlob: Blob, chunkNumber: number) => Promise<void>
   resetRecording: () => void
 }
@@ -71,7 +71,7 @@ export const RecordingProvider: React.FC<RecordingProviderProps> = ({ children }
     }
   }
 
-  const stopRecording = async () => {
+  const stopRecording = async (expectedChunks?: number) => {
     try {
       setRecordingState(prev => ({
         ...prev,
@@ -81,7 +81,7 @@ export const RecordingProvider: React.FC<RecordingProviderProps> = ({ children }
       
       // API呼び出しで録音終了
       if (recordingState.meetingId) {
-        await recordingService.endRecording(recordingState.meetingId)
+        await recordingService.endRecording(recordingState.meetingId, expectedChunks)
       }
       console.log('録音終了')
     } catch (error) {

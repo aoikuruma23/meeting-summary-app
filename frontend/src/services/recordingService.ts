@@ -101,8 +101,13 @@ class RecordingService {
     return response.data
   }
 
-  async endRecording(meetingId: number): Promise<RecordingEndResponse> {
-    const response = await apiClient.post('/recording/end', { meeting_id: meetingId })
+  async endRecording(meetingId: number, expectedChunks?: number): Promise<RecordingEndResponse> {
+    // 端末側が何個のチャンクを送ったはずかを伝える。
+    // サーバ側の受信数と食い違えば「一部が届いていない要約」だと記録できる
+    const response = await apiClient.post('/recording/end', {
+      meeting_id: meetingId,
+      expected_chunks: expectedChunks
+    })
     return response.data
   }
 
