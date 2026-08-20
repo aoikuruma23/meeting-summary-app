@@ -129,6 +129,9 @@ const Recording: React.FC = () => {
   const uploadFailuresRef = useRef(0)
   // 端末側で作られたチャンクの総数（サーバ受信数と突き合わせて欠損を検知する）
   const producedChunksRef = useRef(0)
+  // 送信に失敗した音声を捨てずに保持し、停止時に送り直す。
+  // 画面ロック中は通信が制限されることがあり、その場では何度再送しても通らない
+  const failedChunksRef = useRef<{ index: number; file: File }[]>([])
   const isStoppingRef = useRef(false)
   // 画面消灯によるページ凍結を防ぐための Screen Wake Lock
   const wakeLockRef = useRef<any>(null)
@@ -419,6 +422,7 @@ const Recording: React.FC = () => {
           capturedMsRef.current = 0
           uploadFailuresRef.current = 0
           producedChunksRef.current = 0
+          failedChunksRef.current = []
           isStoppingRef.current = false
           setCapturedSec(0)
           setCaptureWarning(null)
@@ -539,6 +543,26 @@ const Recording: React.FC = () => {
         console.log('アップロード完了')
       }
 
+      // 録音中に送れなかった音声を、画面が点いて通信が戻ったこの時点で送り直す。
+      // 画面ロック中はOS側で通信が制限されることがあり、その場での再送は通らない
+      if (failedChunksRef.current.length > 0 && currentMeetingIdRef.current) {
+        const queued = failedChunksRef.current
+        failedChunksRef.current = []
+        console.log('未送信チャンクの再送を開始:', queued.length, '件')
+        setCaptureWarning(`送信できていない音声を再送しています…（${queued.length}件）`)
+
+        for (const item of queued) {
+          try {
+            await recordingService.uploadChunk(currentMeetingIdRef.current, item.index, item.file)
+            uploadFailuresRef.current = Math.max(0, uploadFailuresRef.current - 1)
+            console.log('再送成功 - chunk', item.index)
+          } catch (error) {
+            console.error('再送に失敗 - chunk', item.index, error)
+          }
+        }
+        setCaptureWarning(null)
+      }
+
       mediaRecorderRef.current = null
 
       // 実際に録れた音声が録音時間より大幅に短い場合、端末側で録音が中断されている。
@@ -608,6 +632,7 @@ const Recording: React.FC = () => {
       capturedMsRef.current = 0
       uploadFailuresRef.current = 0
       producedChunksRef.current = 0
+      failedChunksRef.current = []
       setCapturedSec(0)
       
       // 録音コンテキストをリセット
@@ -653,6 +678,8 @@ const Recording: React.FC = () => {
   // サーバの再起動や一時的な電波の途切れは数十秒で復帰するため、
   // 段階的に間隔を空けながら合計1分ほど粘る
   const UPLOAD_RETRY_DELAYS_MS = [3000, 8000, 20000, 30000]
+  // 保持する未送信チャンクの上限。10分間隔なので12個＝プレミアムの最大録音時間ぶん
+  const MAX_RETAINED_CHUNKS = 12
 
   const handleChunkUpload = async (audioBlob: Blob, chunkIndex: number) => {
     if (!currentMeetingIdRef.current) {
@@ -692,9 +719,14 @@ const Recording: React.FC = () => {
       }
     }
 
-    // 無言で捨てない。停止時にまとめて利用者に伝える
+    // 音声そのものは捨てない。画面が点いて通信が戻る停止時に送り直す
     uploadFailuresRef.current += 1
-    setCaptureWarning('音声の送信に失敗した区間があります。通信状況をご確認ください。')
+    if (failedChunksRef.current.length < MAX_RETAINED_CHUNKS) {
+      failedChunksRef.current.push({ index: chunkIndex, file })
+    } else {
+      console.warn('保持上限を超えたため破棄します - chunk', chunkIndex)
+    }
+    setCaptureWarning('音声の送信に失敗した区間があります。停止時に送り直します。')
   }
 
   const formatTime = (seconds: number) => {
