@@ -132,6 +132,13 @@ const Recording: React.FC = () => {
   // 送信に失敗した音声を捨てずに保持し、停止時に送り直す。
   // 画面ロック中は通信が制限されることがあり、その場では何度再送しても通らない
   const failedChunksRef = useRef<{ index: number; file: File }[]>([])
+  // 画面が消えていた累計時間。Android は画面消灯中にマイク取得を止めるため、
+  // これが長いほど録音が欠けている
+  const hiddenMsRef = useRef(0)
+  const hiddenSinceRef = useRef(0)
+  // 実際に MediaRecorder から出てきた音声の総バイト数。
+  // マイクが止まっていてもタイマーは動くため、時間の計測だけでは欠損を検知できない
+  const capturedBytesRef = useRef(0)
   const isStoppingRef = useRef(false)
   // 画面消灯によるページ凍結を防ぐための Screen Wake Lock
   const wakeLockRef = useRef<any>(null)
@@ -252,8 +259,19 @@ const Recording: React.FC = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        if (hiddenSinceRef.current) {
+          const hiddenMs = Date.now() - hiddenSinceRef.current
+          hiddenMsRef.current += hiddenMs
+          hiddenSinceRef.current = 0
+          if (hiddenMs > 10000) {
+            setCaptureWarning('画面が消えていた間、録音が止まっていた可能性があります。録音中は画面を点けたままにしてください。')
+          }
+        }
         requestWakeLock()
         startKeepAlive()
+      } else {
+        // 画面消灯・他アプリへの切り替え。この間はマイク取得が止まる恐れがある
+        hiddenSinceRef.current = Date.now()
       }
     }
 
@@ -278,6 +296,7 @@ const Recording: React.FC = () => {
 
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
+        capturedBytesRef.current += event.data.size
         console.log(`音声データ受信 - chunk ${chunkIndex}:`, event.data.size, 'bytes')
         pendingUploadsRef.current.push(handleChunkUpload(event.data, chunkIndex))
       }
@@ -423,6 +442,9 @@ const Recording: React.FC = () => {
           uploadFailuresRef.current = 0
           producedChunksRef.current = 0
           failedChunksRef.current = []
+          hiddenMsRef.current = 0
+          hiddenSinceRef.current = 0
+          capturedBytesRef.current = 0
           isStoppingRef.current = false
           setCapturedSec(0)
           setCaptureWarning(null)
@@ -568,21 +590,51 @@ const Recording: React.FC = () => {
       // 実際に録れた音声が録音時間より大幅に短い場合、端末側で録音が中断されている。
       // 黙って「完了」にすると、欠けた議事録を正しいものとして渡してしまう
       const capturedMs = capturedMsRef.current
+      const capturedBytes = capturedBytesRef.current
       const failures = uploadFailuresRef.current
-      console.log('録音時間:', Math.round(elapsedMs / 1000), '秒 / 取得できた音声:', Math.round(capturedMs / 1000), '秒 / アップロード失敗:', failures, '件')
 
-      if (elapsedMs > 60000 && capturedMs < elapsedMs * 0.8) {
-        alert(
-          [
-            '⚠️ 録音の一部が端末側で取得できていません。',
-            '',
-            `録音時間: 約${formatDurationJa(elapsedMs)}`,
-            `実際に取得できた音声: 約${formatDurationJa(capturedMs)}`,
-            '',
-            'スマートフォンの画面が消えると、ブラウザが録音を一時停止することがあります。',
-            '録音中は画面を点けたまま、この画面を前面に置いたままにしてください。'
-          ].join('\n')
+      // 画面が消えたまま停止された場合に備えて、最後の非表示時間も足す
+      if (hiddenSinceRef.current) {
+        hiddenMsRef.current += Date.now() - hiddenSinceRef.current
+        hiddenSinceRef.current = 0
+      }
+      const hiddenMs = hiddenMsRef.current
+
+      // バイト数から実際の音声の長さを見積もる。マイクが止まっていても
+      // タイマーは動き続けるため、時間の計測だけでは欠損を検知できない。
+      // 実測ではマイク録音が毎秒およそ14.5KB、静かな会話でもこの数分の1には収まる
+      const BYTES_PER_SEC = 14500
+      const estimatedAudioMs = (capturedBytes / BYTES_PER_SEC) * 1000
+
+      console.log(
+        '録音時間:', Math.round(elapsedMs / 1000), '秒',
+        '/ 音声データ:', Math.round(capturedBytes / 1024), 'KB (推定', Math.round(estimatedAudioMs / 1000), '秒)',
+        '/ 画面消灯:', Math.round(hiddenMs / 1000), '秒',
+        '/ 送信失敗:', failures, '件'
+      )
+
+      // 3つのどれかに引っかかれば録音は欠けている。
+      // 時間の計測(凍結の検知)・バイト数(マイク停止の検知)・画面消灯時間(原因の特定)
+      const timerStalled = capturedMs < elapsedMs * 0.8
+      const tooLittleAudio = estimatedAudioMs < elapsedMs * 0.5
+      const longHidden = hiddenMs > elapsedMs * 0.2
+
+      if (elapsedMs > 60000 && (timerStalled || tooLittleAudio || longHidden)) {
+        const message = [
+          '⚠️ 録音が途中で止まっていた可能性があります。',
+          '',
+          `録音時間: 約${formatDurationJa(elapsedMs)}`,
+          `取得できた音声: 約${formatDurationJa(estimatedAudioMs)}ぶん`
+        ]
+        if (hiddenMs > 10000) {
+          message.push(`画面が消えていた時間: 約${formatDurationJa(hiddenMs)}`)
+        }
+        message.push(
+          '',
+          'スマートフォンの画面を消すと、Android がマイクの取得を止めてしまいます。',
+          '録音中は画面を点けたまま、この画面を前面に置いたままにしてください。'
         )
+        alert(message.join('\n'))
       } else if (failures > 0) {
         alert(
           [
@@ -591,7 +643,6 @@ const Recording: React.FC = () => {
           ].join('\n')
         )
       }
-
       if (stream.current) {
         stream.current.getTracks().forEach(track => track.stop())
       }
@@ -633,6 +684,9 @@ const Recording: React.FC = () => {
       uploadFailuresRef.current = 0
       producedChunksRef.current = 0
       failedChunksRef.current = []
+      hiddenMsRef.current = 0
+      hiddenSinceRef.current = 0
+      capturedBytesRef.current = 0
       setCapturedSec(0)
       
       // 録音コンテキストをリセット
