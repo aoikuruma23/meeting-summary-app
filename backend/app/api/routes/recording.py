@@ -348,9 +348,13 @@ async def end_recording(
                 expected_chunks = request.expected_chunks
                 if expected_chunks and received_chunks < expected_chunks:
                     missing = expected_chunks - received_chunks
-                    meeting.error_message = (
+                    warning = (
                         f"録音の一部がサーバに届きませんでした（{expected_chunks}件中{missing}件が欠落）。"
                         "この要約は届いた範囲のみを対象にしています。"
+                    )
+                    # 文字起こし側でも欠損が記録されている場合があるため上書きしない
+                    meeting.error_message = (
+                        f"{warning} {meeting.error_message}" if meeting.error_message else warning
                     )
                     db.commit()
                     print(f"DEBUG: チャンク欠損を記録 - expected: {expected_chunks}, received: {received_chunks}")
